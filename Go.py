@@ -7,6 +7,8 @@ gamenotfinished = True
 previousmove = ""
 whitecaptures = 0
 blackcaptures = 0
+whiteterritory = 0
+blackterritory = 0
 
 letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
                "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
@@ -40,21 +42,21 @@ def processcoords(rawcoords):
         return rawcoords
 
 
-def getcolor(coords):
+def getcolor(coords, outofrange=blank):
     if 0 <= coords[0] < boardsize and 0 <= coords[1] < boardsize:
         return board[coords[1]][coords[0]]
     else:
-        return player
+        return outofrange
     # Edge-case handling. Counts edges as a stone of current player
     # Useful for handling captures.
 
 
-def placedown(rawcoords, player):
+def placedown(rawcoords, colortoplace):
         coords = processcoords(rawcoords)
         color = getcolor(coords)
 
         if color == blank or player == blank:
-            board[coords[1]][coords[0]] = player
+            board[coords[1]][coords[0]] = colortoplace
 
         return coords
 
@@ -71,42 +73,44 @@ def findadjacent(coords):
     return adjacents
 
 
-def checkifcaptured(vulnerableplace):
+def checkifsurrounded(vulnerableplace, surroundedby):
 
-    megastone.add(vulnerableplace)
-    currentstone = vulnerableplace
-    stonestocheck = [vulnerableplace]
+    '''vulnerableplace is a location in the area that is being check
+    if it is surrounded by the string "surroundedby"'''
 
-    while len(stonestocheck) > 0:
+    clump.clear()
+    clump.add(vulnerableplace)
+    placestocheck = [vulnerableplace]
 
-        stonestocheck.remove(currentstone)
-        adjacents = findadjacent(currentstone)
+    while len(placestocheck) > 0:
+
+        currentplace = placestocheck[0]  # stacks?
+        placestocheck.remove(currentplace)
+        adjacents = findadjacent(currentplace)
 
         for adjplace in adjacents:
-            color = getcolor(adjplace)
+            color = getcolor(adjplace, surroundedby)
 
-            if color == blank:
+            if color != surroundedby and color != getcolor(vulnerableplace):
+                clump.clear()
                 return False
 
-            if color == opposite(player):
-                if adjplace not in megastone:
-                    megastone.add(adjplace)
-                    stonestocheck.append(adjplace)
-
-        if len(stonestocheck) != 0:
-            currentstone = stonestocheck[0]  # stacks?
-
+            if color == board[vulnerableplace[1]][vulnerableplace[0]]:
+                if adjplace not in clump:
+                    clump.add(adjplace)
+                    placestocheck.append(adjplace)
     else:
         return True
 
 
 printboard(board)
 
+
 while gamenotfinished:
     for player in (black, white):
 
         oppositeplayer = opposite(player)
-        megastone = set()
+        clump = set()
 
         if player == black:
             print("Black's turn")
@@ -118,32 +122,51 @@ while gamenotfinished:
         if not moveinput == "skip":
 
             # Updates board to have piece while assigning coords
-            move = placedown(moveinput, player)
+            try:
+                move = placedown(moveinput, player)
 
-            for adjcoords in findadjacent(move):
-                adjcolor = getcolor(adjcoords)
-                if adjcolor == oppositeplayer:
-                    megastone.clear()
-                    if checkifcaptured(adjcoords):
-                        for stone in megastone:
-                            if player == black:
-                                blackcaptures += 1
-                            if player == white:
-                                whitecaptures += 1
-                            placedown(stone, blank)
-                        break
+                for adjcoords in findadjacent(move):
+                    adjcolor = getcolor(adjcoords)
+                    if adjcolor == oppositeplayer:
+                        clump.clear()
+                        if checkifsurrounded(adjcoords, oppositeplayer):
+                            for stone in clump:
+                                if player == black:
+                                    blackcaptures += 1
+                                if player == white:
+                                    whitecaptures += 1
+                                placedown(stone, blank)
+                            break
+            except ValueError:
+                pass
 
         # Ends turn
         if previousmove == "skip" and moveinput == "skip":
             print()
             gamenotfinished = False
 
+            checkedblanks = []
+
+            for index0, row in enumerate(board):
+                for index1, spot in enumerate(row):
+                    if spot == blank and (index0, index1) not in checkedblanks:
+
+                        if checkifsurrounded((index0, index1), black):
+                            for place in clump:
+                                checkedblanks.append(place)
+                            blackterritory += len(clump)
+
+                        if checkifsurrounded((index0, index1), white):
+                            for place in clump:
+                                checkedblanks.append(place)
+                            whiteterritory += len(clump)
+
             print("Black's captures: " + str(blackcaptures))
+            print("Black's territory: " + str(blackterritory))
             print("White's captures: " + str(whitecaptures))
+            print("White's territory: " + str(whiteterritory))
 
-            
-
-            if blackcaptures > whitecaptures:
+            if blackcaptures + blackterritory > whitecaptures + whiteterritory:
                 print("Winner: Black")
             elif blackcaptures < whitecaptures:
                 print("Winner: White")
