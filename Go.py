@@ -1,10 +1,13 @@
 boardsize = int(input("Enter board size: "))
 board = [""] * boardsize
+
 blank = "-"  # "🔵"
 black = "b"  # "⚫"
 white = "w"  # "⚪"
+
 gamenotfinished = True
 previousmove = ""
+
 whitecaptures = 0
 blackcaptures = 0
 whiteterritory = 0
@@ -43,19 +46,21 @@ def processcoords(rawcoords):
 
 
 def getcolor(coords, outofrange=blank):
+    """
+    Edge case handling. Counts edges as whatever outofrange is.
+    Useful for handling captures.
+    """
     if 0 <= coords[0] < boardsize and 0 <= coords[1] < boardsize:
         return board[coords[1]][coords[0]]
     else:
         return outofrange
-    # Edge-case handling. Counts edges as a stone of current player
-    # Useful for handling captures.
 
 
 def placedown(rawcoords, colortoplace):
         coords = processcoords(rawcoords)
         color = getcolor(coords)
 
-        if color == blank or player == blank:
+        if color == blank or colortoplace == blank:
             board[coords[1]][coords[0]] = colortoplace
 
         return coords
@@ -74,10 +79,10 @@ def findadjacent(coords):
 
 
 def checkifsurrounded(vulnerableplace, surroundedby):
-
-    '''vulnerableplace is a location in the area that is being check
-    if it is surrounded by the string "surroundedby"'''
-
+    """
+    vulnerableplace is a location in the area that is being checked if it is
+    surrounded by the string 'surroundedby'
+    """
     clump.clear()
     clump.add(vulnerableplace)
     placestocheck = [vulnerableplace]
@@ -100,7 +105,7 @@ def checkifsurrounded(vulnerableplace, surroundedby):
                     clump.add(adjplace)
                     placestocheck.append(adjplace)
     else:
-        return True
+        return True  # , clump
 
 
 printboard(board)
@@ -129,7 +134,7 @@ while gamenotfinished:
                     adjcolor = getcolor(adjcoords)
                     if adjcolor == oppositeplayer:
                         clump.clear()
-                        if checkifsurrounded(adjcoords, oppositeplayer):
+                        if checkifsurrounded(adjcoords, player):
                             for stone in clump:
                                 if player == black:
                                     blackcaptures += 1
