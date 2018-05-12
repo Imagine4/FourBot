@@ -1,4 +1,4 @@
-blank = "+"
+blank = "·"
 black = "⚫"
 white = "⚪"
 

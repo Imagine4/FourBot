@@ -4,7 +4,7 @@ import importlib
 
 client = discord.Client()
 
-auth = cmds.readjson("/home/pi/Documents/FourBot/auth.json")
+auth = cmds.readjson(r"C:\Users\Red Solo\PycharmProjects\Fourbot\auth.json")
 
 
 @client.event
@@ -21,5 +21,6 @@ async def on_message(msg):
     if cmds.isupdate(msg):
         # Reloads cmds
         importlib.reload(cmds)
+        importlib.reload("Go")
 
 client.run(auth)
