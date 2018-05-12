@@ -2,6 +2,7 @@ import json
 import discord
 import Go
 from Go import *
+import re
 
 prefix = "4."
 
@@ -32,5 +33,23 @@ async def process(msg, client):
             await msg.channel.send("Updated")
         if arr[0] == "go":
             if arr[1] == "create":
-                game = GoGame(5)
-                await msg.channel.send("```" + game.printboard(game.board) + "```")
+                player1 = client
+                try:
+                    match = re.search(r'<@(?:\!?)([0-9]{,18})>', arr[2])
+                except IndexError:
+                    await msg.channel.send("Where is player 2??")
+                player2 = match.group(0)
+                print(player1)
+                print(player2)
+                if match == None:
+                    await msg.channel.send("Why isn't player 2 pinged?")
+                else:
+                    try:
+                        game = GoGame(int(arr[3]))
+                    except IndexError and ValueError:
+                        game = GoGame(19)
+                    await msg.channel.send("```" + game.printboard(game.board) + "```")
+            else:
+                await msg.channel.send("I can't find a Go command like that...")
+        else:
+            await msg.channel.send("I can't find any of my commands like that...")

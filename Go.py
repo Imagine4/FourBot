@@ -31,7 +31,7 @@ class GoGame:
             counter += 1
             boardtoprint += ("\n" + str(counter)
                              + (" " * (3 - len(str(counter)))) + " ".join(row))
-            return boardtoprint
+        return boardtoprint
 
     def opposite(self, currentplayer):
         if currentplayer == black:
