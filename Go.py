@@ -1,6 +1,6 @@
 blank = "·"
-black = "⚫"
-white = "⚪"
+black = "●"
+white = "○"
 
 letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
                "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
@@ -24,13 +24,34 @@ class GoGame:
             self.board[i] = [blank] * size
 
     def printboard(self, inputboard):
-        counter = 0
+
+        starpoints = []
+
+        if self.boardsize == 19:
+            starpoints = [(3,3), (3,9), (3,15),
+                          (9,3), (9,9), (9,15),
+                          (15,3), (15,9), (15,15)]
+        elif self.boardsize == 13:
+            starpoints = [(3,3), (3,9),
+                          (6,6),
+                          (9,3), (9,9)]
+        elif self.boardsize == 9:
+            starpoints = [(2,2), (2,6),
+                          (4,4),
+                          (6,2), (6,6)]
+
+        if starpoints is not []:
+            for point in starpoints:
+                inputboard = self.placedown(inputboard, point, "+")
+
         boardtoprint = "   " + " ".join(letterorder[:self.boardsize])
+        counter = self.boardsize
 
         for row in inputboard:
-            counter += 1
             boardtoprint += ("\n" + str(counter)
                              + (" " * (3 - len(str(counter)))) + " ".join(row))
+            counter -= 1
+
         return boardtoprint
 
     def opposite(self, currentplayer):
@@ -43,7 +64,7 @@ class GoGame:
 
     def processcoords(self, rawcoords):
         if type(rawcoords) == str:
-            return letterorder.index(rawcoords[0].upper()), int(rawcoords[1:]) - 1
+            return self.boardsize - (letterorder.index(rawcoords[0].upper()) + 1), self.boardsize - int(rawcoords[1:])
         else:
             return rawcoords
 
@@ -57,14 +78,13 @@ class GoGame:
         else:
             return outofrange
 
-    def placedown(self, rawcoords, colortoplace):
-        coords = self.processcoords(rawcoords)
+    def placedown(self, board, coords, colortoplace):
         color = self.getcolor(coords)
 
         if color == blank or colortoplace == blank:
-            self.board[coords[1]][coords[0]] = colortoplace
+            board[coords[1]][coords[0]] = colortoplace
 
-        return coords
+        return board
 
     def findadjacent(self, coords):
         adjacents = []
@@ -113,7 +133,8 @@ class GoGame:
 
         if not moveinput == "skip":
             try:
-                move = self.placedown(moveinput, player)
+                move = self.processcoords(moveinput)
+                self.board = self.placedown(self.board, move, player)
 
                 for adjcoords in self.findadjacent(move):
                     adjcolor = self.getcolor(adjcoords)
@@ -125,7 +146,7 @@ class GoGame:
                                     self.blackcaptures += 1
                                 if player == white:
                                     self.whitecaptures += 1
-                                self.placedown(stone, blank)
+                                self.board = self.placedown(self.board, stone, blank)
                             break
             except ValueError:
                 pass
@@ -151,4 +172,3 @@ class GoGame:
                             self.whiteterritory += len(self.clump)
 
         self.previousmove = moveinput
-
