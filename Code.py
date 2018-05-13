@@ -1,5 +1,6 @@
 import discord
 import cmds
+import Go
 import importlib
 
 client = discord.Client()
@@ -21,6 +22,6 @@ async def on_message(msg):
     if cmds.isupdate(msg):
         # Reloads cmds
         importlib.reload(cmds)
-        importlib.reload("Go")
+        importlib.reload(Go)
 
 client.run(auth)

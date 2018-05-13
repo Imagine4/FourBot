@@ -1,6 +1,6 @@
 blank = "·"
-black = "●"
-white = "○"
+black = "○"
+white = "●"
 
 letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
                "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
@@ -14,6 +14,10 @@ class GoGame:
         self.board = [""] * size
         self.clump = set()
         self.previousmove = ""
+        self.turn = black
+        self.previousturn = white
+        self.previousboard = []
+        self.boardbeforelast = []
         self.blackcaptures = 0
         self.whitecaptures = 0
         self.blackterritory = 0
@@ -24,30 +28,30 @@ class GoGame:
             self.board[i] = [blank] * size
 
     def printboard(self, inputboard):
-
         starpoints = []
+        boardcopy = [i[:] for i in inputboard]
 
         if self.boardsize == 19:
-            starpoints = [(3,3), (3,9), (3,15),
-                          (9,3), (9,9), (9,15),
-                          (15,3), (15,9), (15,15)]
+            starpoints = [(3, 3), (3, 9), (3, 15),
+                          (9, 3), (9, 9), (9, 15),
+                          (15, 3), (15, 9), (15, 15)]
         elif self.boardsize == 13:
-            starpoints = [(3,3), (3,9),
-                          (6,6),
-                          (9,3), (9,9)]
+            starpoints = [(3, 3), (3, 9),
+                          (6, 6),
+                          (9, 3), (9, 9)]
         elif self.boardsize == 9:
-            starpoints = [(2,2), (2,6),
-                          (4,4),
-                          (6,2), (6,6)]
+            starpoints = [(2, 2), (2, 6),
+                          (4, 4),
+                          (6, 2), (6, 6)]
 
         if starpoints is not []:
             for point in starpoints:
-                inputboard = self.placedown(inputboard, point, "+")
+                boardcopy = self.placedown(boardcopy, point, "+")
 
         boardtoprint = "   " + " ".join(letterorder[:self.boardsize])
         counter = self.boardsize
 
-        for row in inputboard:
+        for row in boardcopy:
             boardtoprint += ("\n" + str(counter)
                              + (" " * (3 - len(str(counter)))) + " ".join(row))
             counter -= 1
@@ -64,27 +68,27 @@ class GoGame:
 
     def processcoords(self, rawcoords):
         if type(rawcoords) == str:
-            return self.boardsize - (letterorder.index(rawcoords[0].upper()) + 1), self.boardsize - int(rawcoords[1:])
+            return letterorder.index(rawcoords[0].upper()), self.boardsize - int(rawcoords[1:])
         else:
             return rawcoords
 
-    def getcolor(self, coords, outofrange=blank):
+    def getcolor(self, coords, board, outofrange=blank):
         """
         Edge case handling. Counts edges as whatever outofrange is.
         Useful for handling captures.
         """
         if 0 <= coords[0] < self.boardsize and 0 <= coords[1] < self.boardsize:
-            return self.board[coords[1]][coords[0]]
+            return board[coords[1]][coords[0]]
         else:
             return outofrange
 
-    def placedown(self, board, coords, colortoplace):
-        color = self.getcolor(coords)
+    def placedown(self, theboard, coords, colortoplace):
+        color = self.getcolor(coords, theboard)
 
         if color == blank or colortoplace == blank:
-            board[coords[1]][coords[0]] = colortoplace
+            theboard[coords[1]][coords[0]] = colortoplace  # ###
 
-        return board
+        return theboard
 
     def findadjacent(self, coords):
         adjacents = []
@@ -97,7 +101,7 @@ class GoGame:
 
         return adjacents
 
-    def checkifsurrounded(self, vulnerableplace, surroundedby):
+    def checkifsurrounded(self, vulnerableplace, surroundedby, board):
         """
         vulnerableplace is a location in the area that is being check
         if it is surrounded by the string surroundedby
@@ -114,9 +118,9 @@ class GoGame:
             adjacents = self.findadjacent(currentplace)
 
             for adjplace in adjacents:
-                color = self.getcolor(adjplace, surroundedby)
+                color = self.getcolor(adjplace, board, surroundedby)
 
-                if color != surroundedby and color != self.getcolor(vulnerableplace):
+                if color != surroundedby and color != self.getcolor(vulnerableplace, board):
                     self.clump.clear()
                     return False
 
@@ -130,45 +134,71 @@ class GoGame:
     def nextmove(self, player, moveinput):
 
         oppositeplayer = self.opposite(player)
+        self.previousturn = self.turn
 
         if not moveinput == "skip":
             try:
                 move = self.processcoords(moveinput)
-                self.board = self.placedown(self.board, move, player)
+                tentativeboard = [i[:] for i in self.board]
+                tentativeboard = self.placedown(tentativeboard, move, player)
 
                 for adjcoords in self.findadjacent(move):
-                    adjcolor = self.getcolor(adjcoords)
+                    adjcolor = self.getcolor(adjcoords, tentativeboard)
+
+                    self.clump.clear()
+
                     if adjcolor == oppositeplayer:
-                        self.clump.clear()
-                        if self.checkifsurrounded(adjcoords, player):
+
+                        if self.checkifsurrounded(adjcoords, player, tentativeboard):
+
                             for stone in self.clump:
-                                if player == black:
-                                    self.blackcaptures += 1
-                                if player == white:
-                                    self.whitecaptures += 1
-                                self.board = self.placedown(self.board, stone, blank)
-                            break
+                                tentativeboard = self.placedown(tentativeboard, stone, blank)
+
+                if not tentativeboard == self.boardbeforelast:
+                    # Ko rule
+                    for stone in self.clump:
+
+                        if player == black:
+                            self.blackcaptures += 1
+                        if player == white:
+                            self.whitecaptures += 1
+
+                    self.board = tentativeboard
+
+                    self.previousmove = moveinput
+                    self.turn = self.opposite(self.turn)
+
+                    if self.previousmove is not "skip":
+                        self.boardbeforelast = [i[:] for i in self.previousboard]
+                        self.previousboard = [i[:] for i in self.board]
+
             except ValueError:
                 pass
+        else:
+            self.turn = oppositeplayer
 
-        if self.previousmove == "skip" and moveinput == "skip":
-            print()
-            self.gamenotfinished = False
+        if moveinput == "skip":
 
-            checkedblanks = []
+            if self.previousmove == "skip":
 
-            for index0, row in enumerate(self.board):
-                for index1, spot in enumerate(row):
-                    if spot == blank and (index0, index1) not in checkedblanks:
+                self.gamenotfinished = False
 
-                        if self.checkifsurrounded((index0, index1), black):
-                            for place in self.clump:
-                                checkedblanks.append(place)
-                            self.blackterritory += len(self.clump)
+                checkedblanks = []
 
-                        if self.checkifsurrounded((index0, index1), white):
-                            for place in self.clump:
-                                checkedblanks.append(place)
-                            self.whiteterritory += len(self.clump)
+                for index0, row in enumerate(self.board):
+                    for index1, spot in enumerate(row):
+                        if spot == blank and (index0, index1) not in checkedblanks:
 
-        self.previousmove = moveinput
+                            if self.checkifsurrounded((index0, index1), black, self.board):
+                                for place in self.clump:
+                                    checkedblanks.append(place)
+                                self.blackterritory += len(self.clump)
+
+                            if self.checkifsurrounded((index0, index1), white, self.board):
+                                for place in self.clump:
+                                    checkedblanks.append(place)
+                                self.whiteterritory += len(self.clump)
+
+            self.previousmove = moveinput
+
+
