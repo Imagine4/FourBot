@@ -24,6 +24,7 @@ class GoGame:
         self.whiteterritory = 0
         self.p1 = p1
         self.p2 = p2
+        self.potentialremoves = []
         self.gamenotfinished = True
 
         for i in range(size):
@@ -133,6 +134,45 @@ class GoGame:
         else:
             return True
 
+    def remstones(self, coords):
+
+        self.clump.clear()
+        self.clump.add(coords)
+        placestocheck = [coords]
+
+        while len(placestocheck) > 0:
+
+            currentplace = placestocheck[0]
+            placestocheck.remove(currentplace)
+            adjacents = self.findadjacent(currentplace)
+
+            for adjplace in adjacents:
+                color = self.getcolor(adjplace, self.board)
+
+                if color == self.board[coords[1]][coords[0]]:
+                    if adjplace not in self.clump:
+                        self.clump.add(adjplace)
+                        placestocheck.append(adjplace)
+
+        for place in self.clump:
+            self.placedown(self.board, place, blank)
+
+        checkedblanks = []
+
+        for index0, row in enumerate(self.board):
+            for index1, spot in enumerate(row):
+                if spot == blank and (index0, index1) not in checkedblanks:
+
+                    if self.checkifsurrounded((index0, index1), black, self.board):
+                        for place in self.clump:
+                            checkedblanks.append(place)
+                        self.blackterritory += len(self.clump)
+
+                    if self.checkifsurrounded((index0, index1), white, self.board):
+                        for place in self.clump:
+                            checkedblanks.append(place)
+                        self.whiteterritory += len(self.clump)  # optimise
+
     def nextmove(self, player, moveinput):
 
         oppositeplayer = self.opposite(player)
@@ -182,22 +222,6 @@ class GoGame:
             if self.previousmove == "skip":
 
                 self.gamenotfinished = False
-
-                checkedblanks = []
-
-                for index0, row in enumerate(self.board):
-                    for index1, spot in enumerate(row):
-                        if spot == blank and (index0, index1) not in checkedblanks:
-
-                            if self.checkifsurrounded((index0, index1), black, self.board):
-                                for place in self.clump:
-                                    checkedblanks.append(place)
-                                self.blackterritory += len(self.clump)
-
-                            if self.checkifsurrounded((index0, index1), white, self.board):
-                                for place in self.clump:
-                                    checkedblanks.append(place)
-                                self.whiteterritory += len(self.clump)
 
             self.previousmove = moveinput
 
