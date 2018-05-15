@@ -8,7 +8,7 @@ letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
 
 class GoGame:
 
-    def __init__(self, size):
+    def __init__(self, size, p1, p2):
 
         self.boardsize = size
         self.board = [""] * size
@@ -22,6 +22,8 @@ class GoGame:
         self.whitecaptures = 0
         self.blackterritory = 0
         self.whiteterritory = 0
+        self.p1 = p1
+        self.p2 = p2
         self.gamenotfinished = True
 
         for i in range(size):
@@ -137,43 +139,41 @@ class GoGame:
         self.previousturn = self.turn
 
         if not moveinput == "skip":
-            try:
-                move = self.processcoords(moveinput)
-                tentativeboard = [i[:] for i in self.board]
-                tentativeboard = self.placedown(tentativeboard, move, player)
 
-                for adjcoords in self.findadjacent(move):
-                    adjcolor = self.getcolor(adjcoords, tentativeboard)
+            move = self.processcoords(moveinput)
+            tentativeboard = [i[:] for i in self.board]
+            tentativeboard = self.placedown(tentativeboard, move, player)
 
-                    self.clump.clear()
+            for adjcoords in self.findadjacent(move):
+                adjcolor = self.getcolor(adjcoords, tentativeboard)
 
-                    if adjcolor == oppositeplayer:
+                self.clump.clear()
 
-                        if self.checkifsurrounded(adjcoords, player, tentativeboard):
+                if adjcolor == oppositeplayer:
 
-                            for stone in self.clump:
-                                tentativeboard = self.placedown(tentativeboard, stone, blank)
+                    if self.checkifsurrounded(adjcoords, player, tentativeboard):
 
-                if not tentativeboard == self.boardbeforelast:
-                    # Ko rule
-                    for stone in self.clump:
+                        for stone in self.clump:
+                            tentativeboard = self.placedown(tentativeboard, stone, blank)
 
-                        if player == black:
-                            self.blackcaptures += 1
-                        if player == white:
-                            self.whitecaptures += 1
+            if not tentativeboard == self.boardbeforelast:
+                # Ko rule
+                for stone in self.clump:
 
-                    self.board = tentativeboard
+                    if player == black:
+                        self.blackcaptures += 1
+                    if player == white:
+                        self.whitecaptures += 1
 
-                    self.previousmove = moveinput
-                    self.turn = self.opposite(self.turn)
+                self.board = tentativeboard
 
-                    if self.previousmove is not "skip":
-                        self.boardbeforelast = [i[:] for i in self.previousboard]
-                        self.previousboard = [i[:] for i in self.board]
+                self.previousmove = moveinput
+                self.turn = self.opposite(self.turn)
 
-            except ValueError:
-                pass
+                if self.previousmove is not "skip":
+                    self.boardbeforelast = [i[:] for i in self.previousboard]
+                    self.previousboard = [i[:] for i in self.board]
+
         else:
             self.turn = oppositeplayer
 
