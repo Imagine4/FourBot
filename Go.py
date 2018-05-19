@@ -3,7 +3,7 @@ black = "○"
 white = "●"
 
 letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
-               "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
+               "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA")
 
 
 class GoGame:
@@ -55,8 +55,8 @@ class GoGame:
         counter = self.boardsize
 
         for row in boardcopy:
-            boardtoprint += ("\n" + str(counter)
-                             + (" " * (3 - len(str(counter)))) + " ".join(row))
+            boardtoprint += ("\n" + (" " * (2 - len(str(counter))))
+                             + str(counter) + " " + " ".join(row))
             counter -= 1
 
         return boardtoprint
@@ -89,7 +89,9 @@ class GoGame:
         color = self.getcolor(coords, theboard)
 
         if color == blank or colortoplace == blank:
-            theboard[coords[1]][coords[0]] = colortoplace  # ###
+            theboard[coords[1]][coords[0]] = colortoplace
+        else:
+            return False
 
         return theboard
 
@@ -171,7 +173,7 @@ class GoGame:
                     if self.checkifsurrounded((index0, index1), white, self.board):
                         for place in self.clump:
                             checkedblanks.append(place)
-                        self.whiteterritory += len(self.clump)  # optimise
+                        self.whiteterritory += len(self.clump)  # optimize
 
     def nextmove(self, player, moveinput):
 
@@ -183,6 +185,12 @@ class GoGame:
             move = self.processcoords(moveinput)
             tentativeboard = [i[:] for i in self.board]
             tentativeboard = self.placedown(tentativeboard, move, player)
+
+            if tentativeboard:
+                if self.checkifsurrounded(move, oppositeplayer, tentativeboard):
+                    return
+            else:
+                return
 
             for adjcoords in self.findadjacent(move):
                 adjcolor = self.getcolor(adjcoords, tentativeboard)
@@ -217,10 +225,7 @@ class GoGame:
         else:
             self.turn = oppositeplayer
 
-        if moveinput == "skip":
-
             if self.previousmove == "skip":
-
                 self.gamenotfinished = False
 
             self.previousmove = moveinput

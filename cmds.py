@@ -7,6 +7,7 @@ import re
 prefix = "4test."
 gogames = {}
 
+
 def readjson(path):
     with open(path) as fil:
         return json.load(fil)
@@ -28,18 +29,32 @@ async def process(msg, client):
         # Arr is short for argument. Milo's idea for coding commands
 
         if arr[0] == "help":
-            await msg.channel.send("```4.help: pulls up this menu \n \n"
-                                   "Go commands: \n"
-                                   "    4.go <create> <@player> (board size) (game name): creates a game with you and player with the name game name \n"
-                                   "    4.go <game name> <move>: makes a move in the game \"game name\" (ex: 4.go mygame k10) \n "
-                                   "    4.go delete <game name>: deletes the game game name \n \n"
-                                   "4.source: links FourBot's GitHub page```")
+            await msg.channel.send(format("""
+            
+```{0}help: pulls up this menu 
+ 
+Go commands: 
+    {0}go create <@player> (board size) (game name): creates a game with you and player with the name "gamename"
+    {0}go <gamename> <move>: makes a move in the game "gamename" (ex: 4.go mygame k10), if move is skip, skips turn
+    {0}go delete <game name>: deletes the game "gamename"
+    {0}go board <gamename>: says the current board of the game and who's turn it is
+ 
+{0}source: links FourBot's GitHub page```
+
+""".format(prefix)))
 
         elif arr[0] == "update" and isowner(msg):
             await msg.channel.send("Updated")
 
         elif arr[0] == "source":
             await msg.channel.send("https://github.com/Imagine4/FourBot/")
+
+        elif arr[0] == "listgames":
+            message = "Go Games:\n"
+            for game in gogames.keys():
+                theboard = gogames[game].board
+                message += (game + " - " + str(theboard)) + "\n"
+            await msg.channel.send(message)
 
         elif arr[0] == "go":
             if arr[1] == "create":
@@ -62,6 +77,10 @@ async def process(msg, client):
                     if gamenames == gamenameinput:
                         await msg.channel.send("A game already exists under this name, pick a new one.")
                         return
+
+                if gamenameinput in ("create", "delete", "end", "board"):
+                    await msg.channel.send("That name is reserved for commands")
+                    return
                 else:
                     gamename = gamenameinput
 
@@ -89,14 +108,19 @@ async def process(msg, client):
             elif arr[1] == "delete":
 
                 try:
-                    gogames.pop(arr[2])
-                    await msg.channel.send("The game " + arr[2] + " no longer exists :thumbsup:")
+                    game = gogames[arr[2]]
                 except IndexError:
                     await msg.channel.send("What game am I supposed to delete..?")
                     return
                 except KeyError:
                     await msg.channel.send("I can't find the game you mentioned.")
                     return
+
+                if msg.author.id == game.p1 or msg.author.id == game.p2:
+                    gogames.pop(arr[2])
+                    await msg.channel.send("The game " + arr[2] + " no longer exists :thumbsup:")
+                else:
+                    await msg.channel.send("Hey, that's not your game!")
 
 
             elif arr[1] == "end":
@@ -108,7 +132,7 @@ async def process(msg, client):
                     await msg.channel.send("You didn't specifiy the game!")
                     return
                 except KeyError:
-                    await msg.channel.send("There isn't a game named that")
+                    await msg.channel.send("I can't find the game you mentioned.")
                     return
 
                 if game.gamenotfinished:
@@ -139,6 +163,28 @@ async def process(msg, client):
                     return
 
 
+            elif arr[1] == "board":
+                try:
+                    game = gogames[arr[2]]
+                except IndexError:
+                    await msg.channel.send("You didn't specifiy the game!")
+                    return
+                except KeyError:
+                    await msg.channel.send("I can't find the game you mentioned.")
+                    return
+
+                await msg.channel.send("```"
+                                       + game.printboard(game.board)
+                                       + "```")
+
+                if game.gamenotfinished:
+                    if game.turn == Go.black:
+                        await msg.channel.send("Black's turn")
+                    else:
+                        await msg.channel.send("White's turn")
+                    return
+
+
             else:
 
                 try:
@@ -159,15 +205,12 @@ async def process(msg, client):
                         return
 
                     try:
-
                         game.nextmove(game.turn, arr[2])
-
                     except IndexError or ValueError:
                         await msg.channel.send("Um... you didn't enter a valid move...")
                         return
 
                     if not game.gamenotfinished:
-
                         await msg.channel.send("You can remove dead stones if both players move on the same location of the stone. \n"
                                                "Say 4.go <end> <game name> when done.")
 
