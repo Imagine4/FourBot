@@ -34,9 +34,9 @@ async def process(msg, client):
 ```{0}help: pulls up this menu 
  
 Go commands: 
-    {0}go create <@player> (board size) (game name): creates a game with you and player with the name "gamename"
+    {0}go create <@player> (board size) (gamename): creates a game with you and player with the name "gamename"
     {0}go <gamename> <move>: makes a move in the game "gamename" (ex: 4.go mygame k10), if move is skip, skips turn
-    {0}go delete <game name>: deletes the game "gamename"
+    {0}go delete <gamename>: deletes the game "gamename"
     {0}go board <gamename>: says the current board of the game and who's turn it is
  
 {0}source: links FourBot's GitHub page```
