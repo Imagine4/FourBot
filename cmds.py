@@ -4,7 +4,7 @@ import Go
 from Go import *
 import re
 
-prefix = "4test."
+prefix = "4."
 gogames = {}
 
 

@@ -6,7 +6,7 @@ import importlib
 
 client = discord.Client()
 
-auth = cmds.readjson(r"C:\Users\Red Solo\PycharmProjects\Fourbot\auth.json")
+auth = cmds.readjson(r"/home/pi/Documents/FourBot/auth.json")
 
 
 @client.event
