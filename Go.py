@@ -187,6 +187,9 @@ class GoGame:
                 self.gamenotfinished = False
 
             self.previousmove = moveinput
+
+            return "ok"
+
         else:
             move = self.processcoords(moveinput)
             tempboard = [i[:] for i in self.board]
@@ -211,20 +214,20 @@ class GoGame:
 
             if tempboard == self.boardbeforelast:
                 return "ko"
+            else:
+                for stone in self.clump:
+                    if player == black:
+                        self.blackcaptures += 1
+                    if player == white:
+                        self.whitecaptures += 1
 
-            for stone in self.clump:
-                if player == black:
-                    self.blackcaptures += 1
-                if player == white:
-                    self.whitecaptures += 1
+                self.board = tempboard
 
-            self.board = tempboard
+                self.previousmove = moveinput
+                self.turn = self.opposite(self.turn)
 
-            self.previousmove = moveinput
-            self.turn = self.opposite(self.turn)
+                if self.previousmove is not "skip":
+                    self.boardbeforelast = [i[:] for i in self.previousboard]
+                    self.previousboard = [i[:] for i in self.board]
 
-            if self.previousmove is not "skip":
-                self.boardbeforelast = [i[:] for i in self.previousboard]
-                self.previousboard = [i[:] for i in self.board]
-
-            return "ok"
+                return "ok"
