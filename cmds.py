@@ -23,8 +23,11 @@ def isowner(msg):
 
 # Below is the code that runs every time a message is sent, handles commands
 async def process(msg, client):
-    print(msg.content)
+
+    print(msg.content)  # Debug
+
     if msg.content[:len(prefix)] == prefix:
+
         arr = msg.content[len(prefix):].split(" ")
         # Arr is short for argument. Milo's idea for coding commands
 
@@ -43,7 +46,7 @@ Go commands:
 
 """.format(prefix)))
 
-        elif arr[0] == "update" and isowner(msg):
+        elif arr[0] == "update" or arr[0] == "u" and isowner(msg):
             await msg.channel.send("Updated")
 
         elif arr[0] == "source":
@@ -57,6 +60,7 @@ Go commands:
             await msg.channel.send(message)
 
         elif arr[0] == "go":
+
             if arr[1] == "create":
 
                 p1 = msg.author.id
@@ -64,7 +68,8 @@ Go commands:
                 try:
                     match = re.search(r'<@(?:!?)([0-9]{,18})>', arr[2])
                 except IndexError:
-                    await msg.channel.send("Where is player 2?")
+                    await msg.channel.send("You didn't give any arguments! \n"
+                                           "Syntax: " + prefix + "go create <@player> (board size) (gamename)")
                     return
 
                 try:
@@ -73,19 +78,18 @@ Go commands:
                     gamenameinput = msg.author.name
 
                 for gamenames in gogames.keys():
-
                     if gamenames == gamenameinput:
-                        await msg.channel.send("A game already exists under this name, pick a new one.")
+                        await msg.channel.send("A game already exists under `" + gamenameinput + "`, pick a new one.")
                         return
 
                 if gamenameinput in ("create", "delete", "end", "board"):
-                    await msg.channel.send("That name is reserved for commands")
+                    await msg.channel.send("That name is reserved for commands.")
                     return
                 else:
                     gamename = gamenameinput
 
                 if match is None:
-                    await msg.channel.send("Why isn't player 2 pinged?")
+                    await msg.channel.send("Player 2, the second `create` argument, must be pinged.")
                     return
 
                 elif match is not "":
@@ -95,8 +99,11 @@ Go commands:
 
                     try:
                         gogames[gamename] = GoGame(int(arr[3]), p1, p2)
-                    except IndexError or ValueError:
+                    except IndexError:
                         gogames[gamename] = GoGame(19, p1, p2)
+                    except ValueError:
+                        await msg.channel.send("Board size, the third `create` argument, must be a number.")
+                        return
 
                     await msg.channel.send("Game created under the name " + gamename)
                     await msg.channel.send("```"
@@ -140,18 +147,13 @@ Go commands:
                     return
                 else:
 
-                    whiteterritory = game.whiteterritory
-                    blackterritory = game.blackterritory
-                    whitecaptures = game.whitecaptures
-                    blackcaptures = game.blackcaptures
+                    await msg.channel.send("Black's captures: " + str(game.blackcaptures) + "\n"
+                                           + "Black's territory: " + str(game.whiteterritory) + "\n"
+                                           + "White's captures: " + str(game.whitecaptures) + "\n"
+                                           + "White's territory: " + str(game.whiteterritory))
 
-                    await msg.channel.send("Black's captures: " + str(blackcaptures) + "\n"
-                                           + "Black's territory: " + str(blackterritory) + "\n"
-                                           + "White's captures: " + str(whitecaptures) + "\n"
-                                           + "White's territory: " + str(whiteterritory))
-
-                    blackscores = blackcaptures + blackterritory
-                    whitescores = (whitecaptures + whiteterritory) + 6.5
+                    blackscores = game.blackcaptures + game.blackterritory
+                    whitescores = (game.whitecaptures + game.whiteterritory) + 6.5
 
                     if blackscores > whitescores:
                         await msg.channel.send("Winner: Black by " + str(blackscores - whitescores) + " points")
@@ -190,7 +192,7 @@ Go commands:
                 try:
                     game = gogames[arr[1]]
                 except KeyError:
-                    await msg.channel.send("There's no Go command like that")
+                    await msg.channel.send("There's no Go command or game named that.")
                     return
 
                 if msg.author.id not in (game.p1, game.p2):
@@ -204,31 +206,31 @@ Go commands:
                         await msg.channel.send("It's not your turn!")
                         return
 
-                    try:
-                        game.nextmove(game.turn, arr[2])
-                    except IndexError or ValueError:
-                        await msg.channel.send("Um... you didn't enter a valid move...")
-                        return
+                    valility = game.nextmove(game.turn, arr[2])
 
                     if not game.gamenotfinished:
                         await msg.channel.send("You can remove dead stones if both players move on the same location of the stone. \n"
-                                               "Say 4.go <end> <game name> when done.")
+                                               "If you don't know what that is, or you're done, say \"4.go end <game name>.\"")
 
-                    if game.previousturn == game.turn:
-                        await msg.channel.send("That was an invalid move, try again")
-                        return
+                    if valility == "ko":
+                        await msg.channel.send("Ko rule prevents that, try again.")
+                    elif valility == "suicide":
+                        await msg.channel.send("Sucide rule prevents that, try again.")
+                    elif valility == "occupied":
+                        await msg.channel.send("That spot is occupied, try again.")
+                    elif valility == "ok":
+                        await msg.channel.send("```"
+                                               + game.printboard(game.board)
+                                               + "```")
 
-                    await msg.channel.send("```"
-                                           + game.printboard(game.board)
-                                           + "```")
-
-                    if game.gamenotfinished:
-                        if game.turn == Go.black:
-                            await msg.channel.send("Black's turn")
-                        else:
-                            await msg.channel.send("White's turn")
-                        return
-
+                        if game.gamenotfinished:
+                            if game.turn == Go.black:
+                                await msg.channel.send("Black's turn")
+                            else:
+                                await msg.channel.send("White's turn")
+                            return
+                    else:
+                        await msg.channel.send("Something's gone horribly wrong")
                 else:
                     try:
                         if arr[2] in game.potentialremoves:

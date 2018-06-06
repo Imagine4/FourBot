@@ -180,54 +180,51 @@ class GoGame:
         oppositeplayer = self.opposite(player)
         self.previousturn = self.turn
 
-        if not moveinput == "skip":
-
-            move = self.processcoords(moveinput)
-            tentativeboard = [i[:] for i in self.board]
-            tentativeboard = self.placedown(tentativeboard, move, player)
-
-            if tentativeboard:
-                if self.checkifsurrounded(move, oppositeplayer, tentativeboard):
-                    return
-            else:
-                return
-
-            for adjcoords in self.findadjacent(move):
-                adjcolor = self.getcolor(adjcoords, tentativeboard)
-
-                self.clump.clear()
-
-                if adjcolor == oppositeplayer:
-
-                    if self.checkifsurrounded(adjcoords, player, tentativeboard):
-
-                        for stone in self.clump:
-                            tentativeboard = self.placedown(tentativeboard, stone, blank)
-
-            if not tentativeboard == self.boardbeforelast:
-                # Ko rule
-                for stone in self.clump:
-
-                    if player == black:
-                        self.blackcaptures += 1
-                    if player == white:
-                        self.whitecaptures += 1
-
-                self.board = tentativeboard
-
-                self.previousmove = moveinput
-                self.turn = self.opposite(self.turn)
-
-                if self.previousmove is not "skip":
-                    self.boardbeforelast = [i[:] for i in self.previousboard]
-                    self.previousboard = [i[:] for i in self.board]
-
-        else:
+        if moveinput == "skip":
             self.turn = oppositeplayer
 
             if self.previousmove == "skip":
                 self.gamenotfinished = False
 
             self.previousmove = moveinput
+        else:
+            move = self.processcoords(moveinput)
+            tempboard = [i[:] for i in self.board]
+            tempboard = self.placedown(tempboard, move, player)
 
+            if tempboard is False:
+                return "occupied"
+            else:
+                if self.checkifsurrounded(move, oppositeplayer, tempboard):
+                    return "suicide"
 
+            for adjcoords in self.findadjacent(move):
+                adjcolor = self.getcolor(adjcoords, tempboard)
+                self.clump.clear()
+
+                if adjcolor == oppositeplayer:
+
+                    if self.checkifsurrounded(adjcoords, player, tempboard):
+
+                        for stone in self.clump:
+                            tempboard = self.placedown(tempboard, stone, blank)
+
+            if tempboard == self.boardbeforelast:
+                return "ko"
+
+            for stone in self.clump:
+                if player == black:
+                    self.blackcaptures += 1
+                if player == white:
+                    self.whitecaptures += 1
+
+            self.board = tempboard
+
+            self.previousmove = moveinput
+            self.turn = self.opposite(self.turn)
+
+            if self.previousmove is not "skip":
+                self.boardbeforelast = [i[:] for i in self.previousboard]
+                self.previousboard = [i[:] for i in self.board]
+
+            return "ok"
