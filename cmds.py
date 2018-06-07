@@ -75,7 +75,7 @@ Go commands:
                 try:
                     gamenameinput = arr[4]
                 except IndexError:
-                    gamenameinput = msg.author.name
+                    gamenameinput = msg.author.name.split(" ")[0]
 
                 for gamenames in gogames.keys():
                     if gamenames == gamenameinput:
