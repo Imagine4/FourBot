@@ -129,7 +129,7 @@ class GoGame:
                     self.clump.clear()
                     return False
 
-                if color == self.board[vulnerableplace[1]][vulnerableplace[0]]:
+                if color == board[vulnerableplace[1]][vulnerableplace[0]]:
                     if adjplace not in self.clump:
                         self.clump.add(adjplace)
                         placestocheck.append(adjplace)
@@ -177,11 +177,11 @@ class GoGame:
 
     def nextmove(self, player, moveinput):
 
-        oppositeplayer = self.opposite(player)
+        oppplayer = self.opposite(player)
         self.previousturn = self.turn
 
         if moveinput == "skip":
-            self.turn = oppositeplayer
+            self.turn = oppplayer
 
             if self.previousmove == "skip":
                 self.gamenotfinished = False
@@ -197,20 +197,21 @@ class GoGame:
 
             if tempboard is False:
                 return "occupied"
-            else:
-                if self.checkifsurrounded(move, oppositeplayer, tempboard):
-                    return "suicide"
 
             for adjcoords in self.findadjacent(move):
                 adjcolor = self.getcolor(adjcoords, tempboard)
                 self.clump.clear()
 
-                if adjcolor == oppositeplayer:
+                if adjcolor == oppplayer:
 
                     if self.checkifsurrounded(adjcoords, player, tempboard):
 
                         for stone in self.clump:
                             tempboard = self.placedown(tempboard, stone, blank)
+            else:
+
+                if self.checkifsurrounded(move, oppplayer, tempboard):
+                    return "suicide"
 
             if tempboard == self.boardbeforelast:
                 return "ko"
