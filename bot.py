@@ -32,7 +32,7 @@ class FourBot(commands.Bot):
             pickle.dump(self.gogames, f)
 
     async def on_ready(self):
-        await self.change_presence(game=discord.Game(name=f"Type `{client.command_prefix} help` for help"))
+        await self.change_presence(activity=discord.Game(name=f"Type `{client.command_prefix} help` for help"))
         self.load_extension('cmds')
         print("I'm here!!!")
     
