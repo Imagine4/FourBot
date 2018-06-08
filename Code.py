@@ -1,5 +1,6 @@
 import discord
 import pickle
+import conversions
 import cmds
 import Go
 import importlib
@@ -30,6 +31,7 @@ async def on_message(msg):
 
         importlib.reload(cmds)
         importlib.reload(Go)
+        importlib.reload(conversions)
 
         with open("games.txt", "rb") as f:
             cmds.gogames = pickle.load(f)

@@ -1,5 +1,5 @@
 import json
-import discord
+import conversions
 import Go
 from Go import *
 import re
@@ -14,7 +14,7 @@ def readjson(path):
 
 
 def isupdate(msg):
-    return msg.content == prefix + "update" and msg.author.id in (212350439532789760, 136611352692129792)
+    return (msg.content == prefix + "update" or msg.content == prefix + "u") and msg.author.id in (212350439532789760, 136611352692129792)
 
 
 def isowner(msg):
@@ -52,14 +52,8 @@ Go commands:
         elif arr[0] == "source":
             await msg.channel.send("https://github.com/Imagine4/FourBot/")
 
-        elif arr[0] == "listgames":
-            message = "Go Games:\n"
-            for game in gogames.keys():
-                theboard = gogames[game].board
-                message += (game + " - " + str(theboard)) + "\n"
-            await msg.channel.send(message)
-
         elif arr[0] == "go":
+
 
             if arr[1] == "create":
 
@@ -68,7 +62,7 @@ Go commands:
                 try:
                     match = re.search(r'<@(?:!?)([0-9]{,18})>', arr[2])
                 except IndexError:
-                    await msg.channel.send("You didn't give any arguments! \n"
+                    await msg.channel.send("You didn't give any arguments!\n"
                                            "Syntax: " + prefix + "go create <@player> (board size) (gamename)")
                     return
 
@@ -89,7 +83,8 @@ Go commands:
                     gamename = gamenameinput
 
                 if match is None:
-                    await msg.channel.send("Player 2, the second `create` argument, must be pinged.")
+                    await msg.channel.send("Player 2, the first `create` argument, must be pinged.\n"
+                                           "Syntax: " + prefix + "go create <@player> (board size) (gamename)")
                     return
 
                 elif match is not "":
@@ -98,18 +93,83 @@ Go commands:
                     print(p2)
 
                     try:
+                        if int(arr[3]) > 30:
+                            await msg.channel.send("no")
+                            return
                         gogames[gamename] = GoGame(int(arr[3]), p1, p2)
                     except IndexError:
                         gogames[gamename] = GoGame(19, p1, p2)
                     except ValueError:
-                        await msg.channel.send("Board size, the third `create` argument, must be a number.")
+                        await msg.channel.send("Board size, the second `create` argument, must be a number.\n"
+                                               "Syntax: " + prefix + "go create <@player> (board size) (gamename)")
                         return
+
+                    game = gogames[gamename]
 
                     await msg.channel.send("Game created under the name " + gamename)
                     await msg.channel.send("```"
-                                           + gogames[gamename].printboard(gogames[gamename].board)
+                                           + game.printboard(game.board)
                                            + "```")
-                    await msg.channel.send("<@" + str(p1) + "> is black. <@" + str(p2) + "> is white.\nBlack's turn")
+                    await msg.channel.send("Turn: " + game.turn + ", Captures: " + Go.black + " " + str(game.whitecaptures) + " " + Go.white + " " + str(game.blackcaptures))
+
+
+            elif arr[1] == "import":
+
+                p1 = msg.author.id
+
+                try:
+                    match = re.search(r'<@(?:!?)([0-9]{,18})>', arr[2])
+                except IndexError:
+                    await msg.channel.send("You didn't give any arguments!\n"
+                                           "Syntax: " + prefix + "go import <@player> <compressed encoding> (gamename)")
+                    return
+
+                if match is not None:
+                    p2 = int(match.group(1))
+                else:
+                    await msg.channel.send("The second player must be pinged.")
+                    return
+
+                try:
+                    gamenameinput = arr[4]
+                except IndexError:
+                    gamenameinput = msg.author.name.split(" ")[0]
+
+                for gamenames in gogames.keys():
+                    if gamenames == gamenameinput:
+                        await msg.channel.send("A game already exists under `" + gamenameinput + "`, pick a new one.")
+                        return
+
+                if gamenameinput in ("create", "delete", "end", "board", "list", "compressed"):
+                    await msg.channel.send("That name is reserved for commands.")
+                    return
+                else:
+                    gamename = gamenameinput
+
+                if match is None:
+                    await msg.channel.send("Player 2, the first `import` argument, must be pinged.\n"
+                                           "Syntax: " + prefix + "go import <@player> <compressed encoding> (gamename)")
+                    return
+
+                gogames[gamename] = GoGame(19, p1, p2)
+                game = gogames[gamename]
+
+                try:
+                    gameinfo = conversions.decodeboard(arr[3])
+                except IndexError:
+                    await msg.channel.send("You need to specify an encoded board.")
+                    return
+                except:
+                    await msg.channel.send("Invalid board. Please encode your board with 4.go encode.")
+                    return
+
+                game.importgame(gameinfo[0], gameinfo[1], gameinfo[2], gameinfo[3])
+
+                await msg.channel.send("Game imported under the name " + gamename)
+                await msg.channel.send("```"
+                                       + game.printboard(game.board)
+                                       + "```")
+                await msg.channel.send("Turn: " + game.turn + ", Captures: " + Go.black + " " + str(game.whitecaptures) + " " + Go.white + " " + str(game.blackcaptures))
 
 
             elif arr[1] == "delete":
@@ -145,7 +205,10 @@ Go commands:
                 if game.gamenotfinished:
                     await msg.channel.send("You game isn't done!")
                     return
+
                 else:
+
+                    game.calculateterritory()
 
                     await msg.channel.send("Black's captures: " + str(game.blackcaptures) + "\n"
                                            + "Black's territory: " + str(game.whiteterritory) + "\n"
@@ -160,16 +223,17 @@ Go commands:
                     else:
                         await msg.channel.send("Winner: White by " + str(whitescores - blackscores) + " points")
 
-                    gogames.pop(arr[1])
+                    gogames.pop(arr[2])
 
                     return
 
 
             elif arr[1] == "board":
+
                 try:
                     game = gogames[arr[2]]
                 except IndexError:
-                    await msg.channel.send("You didn't specifiy the game!")
+                    await msg.channel.send("You need to specifiy a game.")
                     return
                 except KeyError:
                     await msg.channel.send("I can't find the game you mentioned.")
@@ -180,10 +244,25 @@ Go commands:
                                        + "```")
 
                 if game.gamenotfinished:
-                    if game.turn == Go.black:
-                        await msg.channel.send("Black's turn")
-                    else:
-                        await msg.channel.send("White's turn")
+                    await msg.channel.send("Turn: " + game.turn + ", Captures: " + Go.black + " " + str(game.whitecaptures) + " ")
+
+
+            elif arr[1] == "listgames" and msg.author.id in (212350439532789760, 136611352692129792):
+                message = "Go Games:\n"
+                for gamename in gogames.keys():
+                    game = gogames[gamename]
+                    message += (gamename + " - " + str(game.p1) + ", " + str(game.p2) + ", " + game.turn + "\n"
+                                + str(game.movehistory) + "\n"
+                                + conversions.encodeboard(game.board, game.turn, game.blackcaptures, game.whitecaptures)
+                                + "\n\n")
+                await msg.channel.send("```" + message + "```")
+
+            elif arr[1] == "encode":
+
+                try:
+                    encoding = arr[1]
+                except IndexError:
+                    await msg.channel.send("You need to specifiy an encoding.")
                     return
 
 
@@ -215,7 +294,7 @@ Go commands:
                     if valility == "ko":
                         await msg.channel.send("Ko rule prevents that, try again.")
                     elif valility == "suicide":
-                        await msg.channel.send("Sucide rule prevents that, try again.")
+                        await msg.channel.send("Suicide rule prevents that, try again.")
                     elif valility == "occupied":
                         await msg.channel.send("That spot is occupied, try again.")
                     elif valility == "ok":
@@ -224,18 +303,21 @@ Go commands:
                                                + "```")
 
                         if game.gamenotfinished:
-                            if game.turn == Go.black:
-                                await msg.channel.send("Black's turn")
-                            else:
-                                await msg.channel.send("White's turn")
-                            return
+                                await msg.channel.send("Turn: " + game.turn + ", Captures: " + Go.black + " " + str(game.whitecaptures) + " " + Go.white + " " + str(game.blackcaptures))
+
                     else:
                         await msg.channel.send("Something's gone horribly wrong")
                 else:
                     try:
                         if arr[2] in game.potentialremoves:
-                            game.remstones(game.processcoords(arr[2]))
-                            await msg.channel.send("```" + game.printboard(game.board) + "``` \n Removed " + arr[2])
+
+                            move = game.processcoords(arr[2])
+
+                            if game.getcolor(move, game.board) is not Go.blank:
+                                game.remstones(game.processcoords(arr[2]))
+                                await msg.channel.send("```" + game.printboard(game.board) + "``` \n Removed " + arr[2])
+                            else:
+                                await msg.channel.send("You didn't select a stone.")
                         else:
                             game.potentialremoves.append(arr[2])
                             await msg.channel.send("Remove " + arr[2] + "?")
