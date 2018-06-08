@@ -58,8 +58,10 @@ class Go:
             if not ((game.p1 == ctx.author.id and game.turn == go.black) or
                     (game.p2 == ctx.author.id and game.turn == go.white)):
                 return await ctx.send("It's not your turn!")    
-
-            valility = game.nextmove(position)
+            try:
+                valility = game.nextmove(position)
+            except ValueError:
+                return await ctx.send('That is not a valid move!')
 
             if not game.gamenotfinished:
                 await ctx.send(
@@ -74,7 +76,7 @@ class Go:
             elif valility == "occupied":
                 await ctx.send("That spot is occupied, try again.")
             elif valility == "ok":
-                await ctx.send(f"```{game.printboard(game.board)}```")
+                await ctx.send(f"```{game.printboard()}```")
                 if game.gamenotfinished:
                     if game.turn == go.black:
                         await ctx.send("Black's turn")
@@ -90,7 +92,7 @@ class Go:
                     move = game.processcoords(position)
                     if game.getcolor(move, game.board) is not go.blank:
                         game.remstones(move)
-                        await ctx.send(f"```{game.printboard(game.board)}``` \n Removed {position}")
+                        await ctx.send(f"```{game.printboard()}``` \n Removed {position}")
                     else:
                         await ctx.send("You didn't select a stone.")
                 else:
@@ -196,7 +198,7 @@ class Go:
     async def go_board(self, ctx, game: Game):
         """Get a board"""
         game = game[1]
-        await ctx.send(f"```{game.printboard(game.board)}```")
+        await ctx.send(f"```{game.printboard()}```")
 
         if game.gamenotfinished:
             return await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} ")
