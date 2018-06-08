@@ -59,7 +59,7 @@ class Go:
                     (game.p2 == ctx.author.id and game.turn == go.white)):
                 return await ctx.send("It's not your turn!")    
 
-            valility = game.nextmove(game.turn, position)
+            valility = game.nextmove(position)
 
             if not game.gamenotfinished:
                 await ctx.send(
