@@ -1,6 +1,7 @@
 import discord
 import yaml
 import re
+import pickle
 
 from discord.ext import commands
 from help_format import get_help
@@ -19,6 +20,15 @@ class FourBot(commands.Bot):
         # replace help command with our own
         self.all_commands['help'] = self.help
         self.gogames = {}
+        try:
+            with open("games.txt", "rb") as f:
+                self.gogames = pickle.load(f)
+        
+        except FileNotFoundError: pass
+    
+    def save_games(self):
+        with open("games.txt", "wb") as f:
+            pickle.dump(self.gogames, f)
 
     async def on_ready(self):
         await self.change_presence(game=discord.Game(name=f"Type `{client.command_prefix} help` for help"))

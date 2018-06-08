@@ -1,4 +1,5 @@
 import json
+import conversions
 import discord
 import go
 import re
@@ -85,8 +86,12 @@ class Go:
         else:
             try:
                 if position in game.potentialremoves:
-                    game.remstones(game.processcoords(position))
-                    await ctx.send(f"```{game.printboard(game.board)}``` \n Removed {position}")
+                    move = game.processcoords(position)
+                    if game.getcolor(move, game.board) is not Go.blank:
+                        game.remstones(move)
+                        await ctx.send(f"```{game.printboard(game.board)}``` \n Removed {position}")
+                    else:
+                        await ctx.send("You didn't select a stone.")
                 else:
                     game.potentialremoves.append(position)
                     await ctx.send("Remove {position}?")
@@ -99,13 +104,14 @@ class Go:
         """Create a game"""
         p2 = player2
         p1 = ctx.author
+        if size > 30: return await ctx.channel.send("No")
         if not name:
             name = ctx.author.name.split(" ")[0]
 
         if name in self.bot.gogames:
             return await ctx.send(f"A game already exists under `{gamenameinput}`, pick a new one.")
 
-        if name in ("create", "delete", "end", "board"):
+        if name in ctx.command.parent.all_commands:
             return await ctx.send("That name is reserved for commands.")
 
         if not ctx.message.mentions: await ctx.send("You may want to ping player 2.")
@@ -115,7 +121,39 @@ class Go:
         await ctx.send(f"Game created under the name {name}")
         await ctx.send(f"```{self.bot.gogames[name].printboard()}```")
         await ctx.send(f"{p1.mention} is black. {p2.mention} is white.\nBlack's turn")
+    
+    @go.command(name="import")
+    async def go_import(self, ctx, player2: discord.Member, string, name=None):
+        """Import a game"""
+        p1 = ctx.author
+        p2 = player2
+        if not name: name = ctx.author.name.split(" ")[0]
+        if name in self.bot.gogames:
+            return await ctx.send(f"A game already exists under `{gamenameinput}`, pick a new one.")
+        
+        if name in ctx.command.parent.all_commands:
+            return await ctx.send("That name is reserved for commands.")
 
+        if not ctx.message.mentions: await ctx.send("You may want to ping player 2.")
+        ctx.bot.gogames[name] = go.GoGame(19, p1.id, p2.id)
+        try:
+            gameinfo = conversions.decodeboard(string)
+        except IndexError:
+            return await ctx.send("You need to specify an encoded board.")
+        except:
+            return await ctx.send(f"Invalid board. Please encode your board with `{ctx.prefix}.go encode`.")
+ 
+        game.importgame(*gameinfo)
+        await ctx.send(f'Game imported under the name {name}')
+        await ctx.send("```{game.printboard()}```")
+        await ctx.send("Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
+    
+    @go.command(name="encode")
+    async def go_encode(self, ctx, game:Game):
+
+        #TODO: Implement this
+        game = game[1]
+        await ctx.send("This hasn't been implemented yet")
 
     @go.command(name="delete")
     async def go_delete(self, ctx, name: Game): 
@@ -135,6 +173,7 @@ class Go:
             return await ctx.send("You game isn't done!")
             return
         else:
+            game.calculateterritory()
             await ctx.send(
                 f"Black's captures: {game.blackcaptures}\n"
                 f"Black's territory: {game.whiteterritory}\n"
@@ -160,12 +199,13 @@ class Go:
         await ctx.send(f"```{game.printboard(game.board)}```")
 
         if game.gamenotfinished:
-            if game.turn == go.black:
-                await ctx.send("Black's turn")
-            else:
-                await ctx.send("White's turn")
-            return
-
+            return await msg.channel.send("Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} ")
+    
+    @go.after_invoke
+    @go_end.after_invoke
+    @go_create.after_invoke
+    async def save(self, ctx):
+        ctx.bot.save_games()
 
 def setup(bot):
     bot.add_cog(Go(bot))

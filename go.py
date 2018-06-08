@@ -24,11 +24,19 @@ class GoGame:
         self.whiteterritory = 0
         self.p1 = p1
         self.p2 = p2
+        self.movehistory = []
         self.potentialremoves = []
         self.gamenotfinished = True
 
         for i in range(size):
             self.board[i] = [blank] * size
+
+    def importgame(self, board, turn, blackcapts, whitecapts):
+        self.blackcaptures = blackcapts
+        self.whitecaptures = whitecapts
+        self.turn = turn
+        self.boardsize = len(board)
+        self.board = board
 
     def printboard(self, inputboard=None):
         if inputboard == None: inputboard = self.board
@@ -48,9 +56,9 @@ class GoGame:
                           (4, 4),
                           (6, 2), (6, 6)]
 
-        if starpoints is not []:
-            for point in starpoints:
-                boardcopy = self.placedown(boardcopy, point, "+")
+        for point in starpoints:
+            placedownobject = self.placedown(boardcopy, point, "+")
+            boardcopy = placedownobject[0]
 
         boardtoprint = "   " + " ".join(letterorder[:self.boardsize])
         counter = self.boardsize
@@ -92,9 +100,9 @@ class GoGame:
         if color == blank or colortoplace == blank:
             theboard[coords[1]][coords[0]] = colortoplace
         else:
-            return False
+            return theboard, False
 
-        return theboard
+        return theboard, True
 
     def findadjacent(self, coords):
         adjacents = []
@@ -160,6 +168,7 @@ class GoGame:
         for place in self.clump:
             self.placedown(self.board, place, blank)
 
+    def calculateterritory(self):
         checkedblanks = []
 
         for index0, row in enumerate(self.board):
@@ -189,6 +198,7 @@ class GoGame:
 
             self.previousmove = moveinput
 
+            self.movehistory.append(moveinput)
             return "ok"
 
         else:
@@ -196,10 +206,15 @@ class GoGame:
             tempboard = [i[:] for i in self.board]
             tempboard = self.placedown(tempboard, move, player)
 
-            if tempboard is False:
+            if tempboard[1] is False:
                 return "occupied"
 
+            tempboard = tempboard[0]
+
+            captures = 0
+
             for adjcoords in self.findadjacent(move):
+
                 adjcolor = self.getcolor(adjcoords, tempboard)
                 self.clump.clear()
 
@@ -208,20 +223,20 @@ class GoGame:
                     if self.checkifsurrounded(adjcoords, player, tempboard):
 
                         for stone in self.clump:
-                            tempboard = self.placedown(tempboard, stone, blank)
-            else:
+                            tempboard = self.placedown(tempboard, stone, blank)[0]
+                            captures += 1
 
+            if len(self.clump) == 0:
                 if self.checkifsurrounded(move, oppplayer, tempboard):
                     return "suicide"
 
             if tempboard == self.boardbeforelast:
                 return "ko"
             else:
-                for stone in self.clump:
-                    if player == black:
-                        self.blackcaptures += 1
-                    if player == white:
-                        self.whitecaptures += 1
+                if player == black:
+                    self.blackcaptures += captures
+                if player == white:
+                    self.whitecaptures += captures
 
                 self.board = tempboard
 
@@ -232,4 +247,5 @@ class GoGame:
                     self.boardbeforelast = [i[:] for i in self.previousboard]
                     self.previousboard = [i[:] for i in self.board]
 
+                self.movehistory.append(move)
                 return "ok"
