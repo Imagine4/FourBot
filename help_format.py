@@ -1,5 +1,6 @@
 from discord.ext import commands
 
+
 def format_args(cmd):
     """Returns the argument list with optional/mandatory brackets"""
     params = list(cmd.clean_params.items())
@@ -46,4 +47,3 @@ def get_help(ctx, cmd, name=None):
         d += '\n'
 
     return d
-

@@ -10,11 +10,12 @@ from help_format import get_help
 with open('config.yml', 'r') as config_file:
     config = yaml.load(config_file)
 
+
 class FourBot(commands.Bot):
     def __init__(self, cfg):
         super().__init__(cfg['prefix'])
         
-        #keep a copy of the config for future purposes
+        # keep a copy of the config for future purposes
         self.config = cfg
         
         # replace help command with our own

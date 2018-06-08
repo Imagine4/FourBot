@@ -1,30 +1,31 @@
-import json
 import conversions
 import discord
 import go
-import re
 
 from discord.ext import commands
 
 
 def isowner(ctx):
     return ctx.author.id in ctx.bot.config['owners']
-    #return ctx.author.id in (212350439532789760, 136611352692129792)
+    # return ctx.author.id in (212350439532789760, 136611352692129792)
+
 
 class Game(commands.Converter):
-    async def convert(self, ctx, arg):
-        return (arg, ctx.bot.gogames[arg])
+    @staticmethod
+    async def convert(ctx, arg):
+        return arg, ctx.bot.gogames[arg]
+
 
 class Go:
     def __init__(self, bot):
-        #give cog a pointer to bot in case we need it
+        # give cog a pointer to bot in case we need it
         self.bot = bot
 
     @commands.command(aliases=['u'])
     @commands.check(isowner)
     async def update(self, ctx):
         """Update the bot"""
-        #Unload this extension then reload it
+        # Unload this extension then reload it
         self.bot.unload_extension(__name__)
         self.bot.load_extension(__name__)
 
@@ -63,7 +64,7 @@ class Go:
             if not game.gamenotfinished:
                 await ctx.send(
                     "You can remove dead stones if both players move on the same location of the stone. \n"
-                    f"If you don't know what that is, or you're done, say `4.go end {game_name}`."
+                    f"If you don't know what that is, or you're done, say `4.go end {name}`."
                 )
 
             if valility == "ko":
@@ -87,7 +88,7 @@ class Go:
             try:
                 if position in game.potentialremoves:
                     move = game.processcoords(position)
-                    if game.getcolor(move, game.board) is not Go.blank:
+                    if game.getcolor(move, game.board) is not go.blank:
                         game.remstones(move)
                         await ctx.send(f"```{game.printboard(game.board)}``` \n Removed {position}")
                     else:
@@ -109,7 +110,7 @@ class Go:
             name = ctx.author.name.split(" ")[0]
 
         if name in self.bot.gogames:
-            return await ctx.send(f"A game already exists under `{gamenameinput}`, pick a new one.")
+            return await ctx.send(f"A game already exists under `{name}`, pick a new one.")
 
         if name in ctx.command.parent.all_commands:
             return await ctx.send("That name is reserved for commands.")
@@ -129,18 +130,18 @@ class Go:
         p2 = player2
         if not name: name = ctx.author.name.split(" ")[0]
         if name in self.bot.gogames:
-            return await ctx.send(f"A game already exists under `{gamenameinput}`, pick a new one.")
+            return await ctx.send(f"A game already exists under `{name}`, pick a new one.")
         
         if name in ctx.command.parent.all_commands:
             return await ctx.send("That name is reserved for commands.")
 
         if not ctx.message.mentions: await ctx.send("You may want to ping player 2.")
-        ctx.bot.gogames[name] = go.GoGame(19, p1.id, p2.id)
+        ctx.bot.gogames[name] = game = go.GoGame(19, p1.id, p2.id)
         try:
             gameinfo = conversions.decodeboard(string)
         except IndexError:
             return await ctx.send("You need to specify an encoded board.")
-        except:
+        except Exception:
             return await ctx.send(f"Invalid board. Please encode your board with `{ctx.prefix}.go encode`.")
  
         game.importgame(*gameinfo)
@@ -149,9 +150,9 @@ class Go:
         await ctx.send("Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
     
     @go.command(name="encode")
-    async def go_encode(self, ctx, game:Game):
+    async def go_encode(self, ctx, game: Game):
 
-        #TODO: Implement this
+        # TODO: Implement this
         game = game[1]
         await ctx.send("This hasn't been implemented yet")
 
@@ -171,7 +172,6 @@ class Go:
         name, game = game
         if game.gamenotfinished:
             return await ctx.send("You game isn't done!")
-            return
         else:
             game.calculateterritory()
             await ctx.send(
@@ -199,13 +199,14 @@ class Go:
         await ctx.send(f"```{game.printboard(game.board)}```")
 
         if game.gamenotfinished:
-            return await msg.channel.send("Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} ")
+            return await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} ")
     
     @go.after_invoke
     @go_end.after_invoke
     @go_create.after_invoke
     async def save(self, ctx):
         ctx.bot.save_games()
+
 
 def setup(bot):
     bot.add_cog(Go(bot))
