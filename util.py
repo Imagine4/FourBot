@@ -1,16 +1,11 @@
 import json
 import discord
-import Go
-from Go import *
+import go
+from go import *
 import re
 
 prefix = "4."
 gogames = {}
-
-
-def readjson(path):
-    with open(path) as fil:
-        return json.load(fil)
 
 
 def isupdate(msg):

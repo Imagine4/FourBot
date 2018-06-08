@@ -1,7 +1,7 @@
 import discord
 import pickle
-import cmds
-import Go
+import util
+import go
 import importlib
 
 client = discord.Client()
