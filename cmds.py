@@ -1,6 +1,5 @@
-import conversions
 import discord
-import go
+from utils import go, conversions
 
 from discord.ext import commands
 

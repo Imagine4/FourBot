@@ -4,7 +4,7 @@ import re
 import pickle
 
 from discord.ext import commands
-from help_format import get_help
+from utils.help_format import get_help
 
 
 with open('config.yml', 'r') as config_file:
