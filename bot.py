@@ -18,7 +18,8 @@ class FourBot(commands.Bot):
         
         # replace help command with our own
         self.all_commands['help'] = self.help
-    
+        self.gogames = {}
+
     async def on_ready(self):
         await self.change_presence(game=discord.Game(name=f"Type `{client.command_prefix} help` for help"))
         self.load_extension('cmds')
@@ -40,6 +41,7 @@ class FourBot(commands.Bot):
             elif isinstance(original, discord.HTTPException) and original.status == 400:
                 try: await ctx.send('I can\'t send that.')
                 except discord.Forbidden: pass
+            else: raise exception
 
         elif isinstance(exception, commands.CheckFailure): pass
         elif isinstance(exception, commands.CommandNotFound): pass
@@ -49,9 +51,9 @@ class FourBot(commands.Bot):
             if not error_data: await ctx.send('Error: {}'.format(' '.join(exception.args)))
             else:
                 await ctx.send('`{1}` should be a `{0}`.'.format(*error_data[0]))
-        else:
-            raise exception
-
+        else: raise exception
+    
+    @commands.command()
     async def help(self, ctx, *args):
         """This help message"""
         if len(args) == 0:

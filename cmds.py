@@ -5,18 +5,20 @@ import re
 
 from discord.ext import commands
 
-gogames = {}
-
 
 def isowner(ctx):
     return ctx.author.id in ctx.bot.config['owners']
     #return ctx.author.id in (212350439532789760, 136611352692129792)
 
+class Game(commands.Converter):
+    async def convert(self, ctx, arg):
+        return (arg, ctx.bot.gogames[arg])
+
 class Go:
     def __init__(self, bot):
         #give cog a pointer to bot in case we need it
         self.bot = bot
-    
+
     @commands.command(aliases=['u'])
     @commands.check(isowner)
     async def update(self, ctx):
@@ -37,19 +39,15 @@ class Go:
     async def listgames(self, ctx):
         """List all games of go"""
         message = "Go Games:\n"
-        for game in gogames.keys():
-            theboard = gogames[game].board
-            message += f"{game} - {theboard}\n"
+        for name, game in self.bot.gogames.items():
+            message += f"{name} - {game.board}\n"
+        
         await ctx.send(message)
 
     @commands.group(invoke_without_command=True)
-    async def go(self, ctx, game_name, position): 
+    async def go(self, ctx, game: Game, position): 
         """Make a move"""
-        try:
-            game = gogames[game_name]
-        except KeyError:
-            return await ctx.send("There's no Go command or game named that.")
-        
+        name, game = game
         if ctx.author.id not in (game.p1, game.p2):
             return await ctx.send("You're not in a game!")
             
@@ -104,7 +102,7 @@ class Go:
         if not name:
             name = ctx.author.name.split(" ")[0]
 
-        if name in gogames:
+        if name in self.bot.gogames:
             return await ctx.send(f"A game already exists under `{gamenameinput}`, pick a new one.")
 
         if name in ("create", "delete", "end", "board"):
@@ -112,34 +110,27 @@ class Go:
 
         if not ctx.message.mentions: await ctx.send("You may want to ping player 2.")
 
-        gogames[name] = go.GoGame(size, p1.id, p2.id)
+        self.bot.gogames[name] = go.GoGame(size, p1.id, p2.id)
 
         await ctx.send(f"Game created under the name {name}")
-        await ctx.send(f"```{gogames[name].printboard(gogames[name].board)}```")
+        await ctx.send(f"```{self.bot.gogames[name].printboard()}```")
         await ctx.send(f"{p1.mention} is black. {p2.mention} is white.\nBlack's turn")
 
 
     @go.command(name="delete")
-    async def go_delete(self, ctx, name): 
-        try:
-            game = gogames[name]
-        except KeyError:
-            return await ctx.send("I can't find the game you mentioned.")
-
+    async def go_delete(self, ctx, name: Game): 
+        """Delete a game"""
+        name, game = name
         if ctx.author.id in (game.p1, game.p2):
-            gogames.pop(name)
+            self.bot.gogames.pop(name)
             await ctx.send(f"The game {name} no longer exists :thumbsup:")
         else:
             await ctx.send("Hey, that's not your game!")
 
     @go.command(name="end")
-    async def go_end(self, ctx, game):
+    async def go_end(self, ctx, game: Game):
         """End a game"""
-        try:
-            game = gogames[game]
-        except KeyError:
-            return await ctx.send("I can't find the game you mentioned.")
-
+        name, game = game
         if game.gamenotfinished:
             return await ctx.send("You game isn't done!")
             return
@@ -159,26 +150,21 @@ class Go:
             else:
                 await ctx.send("Winner: White by {whitescores - blackscores} points")
 
-            gogames.pop(game)
+            self.bot.gogames.pop(name)
             return
 
     @go.command(name="board")
-    async def go_board(self, ctx, game):
-        """Get a board"""    
-        try:
-            game = gogames[arr[2]]
-        except KeyError:
-            await ctx.send("I can't find the game you mentioned.")
+    async def go_board(self, ctx, game: Game):
+        """Get a board"""
+        game = game[1]
+        await ctx.send(f"```{game.printboard(game.board)}```")
+
+        if game.gamenotfinished:
+            if game.turn == go.black:
+                await ctx.send("Black's turn")
+            else:
+                await ctx.send("White's turn")
             return
-
-            await ctx.send(f"```{game.printboard(game.board)}```")
-
-            if game.gamenotfinished:
-                if game.turn == go.black:
-                    await ctx.send("Black's turn")
-                else:
-                    await ctx.send("White's turn")
-                return
 
 
 def setup(bot):

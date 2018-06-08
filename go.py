@@ -30,7 +30,8 @@ class GoGame:
         for i in range(size):
             self.board[i] = [blank] * size
 
-    def printboard(self, inputboard):
+    def printboard(self, inputboard=None):
+        if inputboard == None: inputboard = self.board
         starpoints = []
         boardcopy = [i[:] for i in inputboard]
 
