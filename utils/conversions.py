@@ -1,6 +1,12 @@
-from math import log, sqrt, ceil
+from math import log, ceil
 
 alph = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
+symbols = {
+    '0': '·',
+    '1': "○",
+    '2': "●"
+}
+encode_symbols = {v: k for k, v in symbols.items()}
 
 
 def tobase(num, base):
@@ -19,14 +25,10 @@ def encodeboard(board, turn, blackcapts, whitecapts):
 
     for row in board:
         for char in row:
-            if char == '·':
-                trits += "0"
-            if char == "○":
-                trits += "1"
-            if char == "●":
-                trits += "2"
+            if char in encode_symbols:
+                trits += encode_symbols[char]
 
-    if turn == '○':
+    if turn == symbols['1']:
         trits += "1"
     else:
         trits += "2"
@@ -36,7 +38,7 @@ def encodeboard(board, turn, blackcapts, whitecapts):
 
     dec = int(trits, 3)
     output = tobase(dec, 64)
-    length = ceil((len(board)**2 + 1 + 2*8) * log(3) / log(64))
+    length = int(ceil((len(board)**2 + 1 + 2*8) * log(3) / log(64)))
 
     return output.rjust(length, "0")
 
@@ -62,16 +64,11 @@ def decodeboard(state):
     tritswhite = tritsnew[size**2 + 1:size**2 + 9]
     tritsblack = tritsnew[size**2 + 9:]
 
-    board = [[None] * size for i in range(size)]
+    board = [[None] * size] * size
 
-    for index0, start in enumerate(range(0, size ** 2, size)):
-        for index1, spot in enumerate(tritsboard[start:(start + size)]):
-            if spot == "0":
-                board[index0][index1] = '·'
-            elif spot == "1":
-                board[index0][index1] = "○"
-            elif spot == "2":
-                board[index0][index1] = "●"
+    for i, start in enumerate(range(0, size ** 2, size)):
+        for j, spot in enumerate(tritsboard[start:(start + size)]):
+            board[i][j] = symbols.get(spot)
 
     turn = '●'
     if tritsturn == "1":
@@ -88,11 +85,11 @@ def fromchat(rawboard, turn=-1, blackcapts=0, whitecapts=0):
             newstring += char
 
     newstring = newstring.splitlines()[2:]
-    board = [[None] * len(newstring) for i in range(len(newstring))]
+    board = [[None] * len(newstring)] * len(newstring)
 
-    for index0, line in enumerate(newstring):
-        for index1, char in enumerate(line.split()):
-            board[index0][index1] = char
+    for i, line in enumerate(newstring):
+        for j, char in enumerate(line.split()):
+            board[i][j] = char
 
     if turn == -1:
         return board

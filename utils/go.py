@@ -9,7 +9,6 @@ letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
 class GoGame:
 
     def __init__(self, size, p1, p2):
-
         self.boardsize = size
         self.board = [""] * size
         self.clump = set()
@@ -31,15 +30,27 @@ class GoGame:
         for i in range(size):
             self.board[i] = [blank] * size
 
-    def importgame(self, board, turn, blackcapts, whitecapts):
+    @staticmethod
+    def findadjacent(coords):
+        adjacents = []
 
+        for xdirection in (-1, 1):
+            adjacents.append((coords[0] + xdirection, coords[1]))
+
+        for ydirection in (-1, 1):
+            adjacents.append((coords[0], coords[1] + ydirection))
+
+        return adjacents
+
+    def importgame(self, board, turn, blackcapts, whitecapts):
         self.blackcaptures = blackcapts
         self.whitecaptures = whitecapts
         self.turn = turn
         self.boardsize = len(board)
         self.board = board
 
-    def printboard(self, inputboard):
+    def printboard(self):
+        inputboard = self.board
         starpoints = []
         boardcopy = [i[:] for i in inputboard]
 
@@ -70,10 +81,10 @@ class GoGame:
 
         return boardtoprint
 
-    def opposite(self, currentplayer):
-        if currentplayer == black:
+    def opposite(self):
+        if self.turn == black:
             return white
-        elif currentplayer == white:
+        elif self.turn == white:
             return black
         else:
             return blank
@@ -103,17 +114,6 @@ class GoGame:
             return theboard, False
 
         return theboard, True
-
-    def findadjacent(self, coords):
-        adjacents = []
-
-        for xdirection in (-1, 1):
-            adjacents.append((coords[0] + xdirection, coords[1]))
-
-        for ydirection in (-1, 1):
-            adjacents.append((coords[0], coords[1] + ydirection))
-
-        return adjacents
 
     def checkifsurrounded(self, vulnerableplace, surroundedby, board):
         """
@@ -185,9 +185,9 @@ class GoGame:
                             checkedblanks.append(place)
                         self.whiteterritory += len(self.clump)  # optimize
 
-    def nextmove(self, player, moveinput):
-
-        oppplayer = self.opposite(player)
+    def nextmove(self, moveinput):
+        player = self.turn
+        oppplayer = self.opposite()
         self.previousturn = self.turn
 
         if moveinput == "skip":
@@ -241,7 +241,7 @@ class GoGame:
                 self.board = tempboard
 
                 self.previousmove = moveinput
-                self.turn = self.opposite(self.turn)
+                self.turn = self.opposite()
 
                 if self.previousmove is not "skip":
                     self.boardbeforelast = [i[:] for i in self.previousboard]
