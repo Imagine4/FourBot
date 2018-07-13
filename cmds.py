@@ -1,6 +1,8 @@
 import discord
 from utils import go, conversions
-
+import yaml
+import secret
+import importlib
 from discord.ext import commands
 
 
@@ -20,34 +22,38 @@ class Go:
         # give cog a pointer to bot in case we need it
         self.bot = bot
 
-    @commands.command(aliases=['u'])
+    @commands.command(aliases=['u'], hidden=True)
     @commands.check(isowner)
-    async def update(self, ctx):
-        """Update the bot"""
-        # Unload this extension then reload it
-        self.bot.unload_extension(__name__)
-        self.bot.load_extension(__name__)
+    async def update(self, ctx, extension=__name__):
+        """Updates the code to implement recent changes."""
+        print(extension)
+        if extension == "config":
+            with open('config.yml', 'r') as config_file:
+                ctx.bot.config = yaml.load(config_file)
+        elif extension == __name__:
+            self.bot.unload_extension(__name__)
+            self.bot.load_extension(__name__)
+        else:
+            importlib.reload(extension)
 
-        await ctx.send("Updated")
+        await ctx.send("Updated " + extension)
 
     @commands.command()
     async def source(self, ctx):
-        """Get my source code"""
+        """Posts my GitHub link."""
         await ctx.send("https://github.com/Imagine4/FourBot/")
 
-    @commands.command()
-    @commands.check(isowner)
-    async def listgames(self, ctx):
-        """List all games of go"""
-        message = "Go Games:\n"
-        for name, game in self.bot.gogames.items():
-            message += f"{name} - {game.board}\n"
-        
-        await ctx.send(message)
+    @commands.command(name=secret.letter, hidden=True)
+    async def secret_command(self, ctx, thing=None, stuff=None):
+        if ctx.guild is None:
+            message = secret.bleh(thing, stuff)
+            if message:
+                await ctx.send(message)
 
     @commands.group(invoke_without_command=True)
     async def go(self, ctx, game: Game, position): 
-        """Make a move"""
+        """Go, the board game!
+        Use the go command by itself to make a move! For the position, letter goes first, then number."""
         name, game = game
         if ctx.author.id not in (game.p1, game.p2):
             return await ctx.send("You're not in a game!")
@@ -103,10 +109,10 @@ class Go:
                 
     @go.command(name="create")
     async def go_create(self, ctx, player2: discord.Member, size: int=19, name=None):
-        """Create a game"""
+        """Creates a new game of Go."""
         p2 = player2
         p1 = ctx.author
-        if size > 30: return await ctx.channel.send("No")
+        if size > 26: return await ctx.channel.send("No")
         if not name:
             name = ctx.author.name.split(" ")[0]
 
@@ -126,7 +132,7 @@ class Go:
     
     @go.command(name="import")
     async def go_import(self, ctx, player2: discord.Member, string, name=None):
-        """Import a game"""
+        """Allows you to import a game in a variety of ways."""
         p1 = ctx.author
         p2 = player2
         if not name: name = ctx.author.name.split(" ")[0]
@@ -159,7 +165,7 @@ class Go:
 
     @go.command(name="delete")
     async def go_delete(self, ctx, name: Game): 
-        """Delete a game"""
+        """Deletes a Go game you're in."""
         name, game = name
         if ctx.author.id in (game.p1, game.p2):
             self.bot.gogames.pop(name)
@@ -169,7 +175,7 @@ class Go:
 
     @go.command(name="end")
     async def go_end(self, ctx, game: Game):
-        """End a game"""
+        """Ends a game, use after both players have skipped their turn."""
         name, game = game
         if game.gamenotfinished:
             return await ctx.send("You game isn't done!")
@@ -195,13 +201,28 @@ class Go:
 
     @go.command(name="board")
     async def go_board(self, ctx, game: Game):
-        """Get a board"""
+        """Prints the board, captures, and turn from the given game."""
         game = game[1]
         await ctx.send(f"```{game.printboard()}```")
 
         if game.gamenotfinished:
             return await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} ")
-    
+
+    @go.command()
+    @commands.check(isowner)
+    async def listgames(self, ctx):
+        """List all games of go. Owner only."""
+        message = "Go Games:\n"
+        for name, game in self.bot.gogames.items():
+            message += (name + " - " + str(game.p1) + ", " + str(game.p2) + ", " + game.turn + "\n"
+                        + str(game.movehistory) + "\n"
+                        + conversions.encodeboard(game.board, game.turn, game.blackcaptures,
+                                                  game.whitecaptures)
+                        + "\n\n")
+        #    message += f"{name} - {game.board}\n"
+
+        await ctx.send(message)
+
     @go.after_invoke
     @go_end.after_invoke
     @go_create.after_invoke

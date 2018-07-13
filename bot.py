@@ -26,17 +26,41 @@ class FourBot(commands.Bot):
                 self.gogames = pickle.load(f)
         
         except FileNotFoundError: pass
-    
+
+    async def on_message(self, message):
+
+        content = message.content
+
+        if message.author.id == 416693134412611586:
+            return
+
+        if message.guild is None:
+            if content.startswith("?") and len(content) > 1:
+                await message.channel.send("That's not my prefix!")
+
+            if message.author.id in (212350439532789760, 136611352692129792):
+                print("DM with " + message.author.name + ": " + message.content)
+        elif message.guild.id in (356544373267103744, 422904859654750210):
+            print(message.guild.name
+                  + " in " + message.channel.name
+                  + " by " + message.author.name
+                  + ": " + message.content)
+
+        await self.process_commands(message)
+
     def save_games(self):
         with open("games.txt", "wb") as f:
             pickle.dump(self.gogames, f)
 
     async def on_ready(self):
-        await self.change_presence(activity=discord.Game(name=f"Type `{client.command_prefix} help` for help"))
+        await self.change_presence(activity=discord.Game(name=f"Type {client.command_prefix}help for help"))
         self.load_extension('cmds')
         print("I'm here!!!")
     
     async def on_command_error(self, ctx: commands.Context, exception: Exception):
+
+        phrase = "Something's gone wrong... \n"
+
         if isinstance(exception, commands.CommandInvokeError):
             # all exceptions are wrapped in CommandInvokeError if they are not a subclass of CommandError
             # you can access the original exception with .original
@@ -44,13 +68,13 @@ class FourBot(commands.Bot):
             if isinstance(original, discord.Forbidden):
                 # permissions error
                 try:
-                    await ctx.send('Permissions error: `{}`'.format(exception))
+                    await ctx.send(phrase + 'Permissions error: `{}`'.format(exception))
                 except discord.Forbidden:
                     # we can't send messages in that channel
                     pass
 
             elif isinstance(original, discord.HTTPException) and original.status == 400:
-                try: await ctx.send('I can\'t send that.')
+                try: await ctx.send(phrase + "The output can't be sent on Discord (probably too long).")
                 except discord.Forbidden: pass
             else: raise exception
 
@@ -59,26 +83,27 @@ class FourBot(commands.Bot):
         elif isinstance(exception, commands.UserInputError):
             error = ' '.join(exception.args)
             error_data = re.findall('Converting to \"(.*)\" failed for parameter \"(.*)\"\.', error)
-            if not error_data: await ctx.send('Error: {}'.format(' '.join(exception.args)))
+            if not error_data: await ctx.send(phrase + 'Error: {}'.format(' '.join(exception.args)))
             else:
-                await ctx.send('`{1}` should be a `{0}`.'.format(*error_data[0]))
+                await ctx.send(phrase + '`{1}` needs to be a `{0}`.'.format(*error_data[0]))
         else: raise exception
     
     @commands.command()
     async def help(self, ctx, *args):
-        """This help message"""
+        """Shows the help message."""
         if len(args) == 0:
-            d = 'Commands:\n'
+            d = f"*Use {config['prefix']}help <command> for more info. Works for subcommands, too!*\n"
             cmds = client.commands
             for cmd in sorted(list(cmds), key=lambda x: x.name):
-                d += '\n  `{}{}`'.format(ctx.prefix, cmd.name)
+                if cmd.hidden is not True:
+                    d += '\n  `{}{}`'.format(ctx.prefix, cmd.name)
 
-                brief = cmd.brief
-                if brief is None and cmd.help is not None:
-                    brief = cmd.help.split('\n')[0]
+                    brief = cmd.brief
+                    if brief is None and cmd.help is not None:
+                        brief = cmd.help.split('\n')[0]
 
-                if brief is not None:
-                    d += ' - {}'.format(brief)
+                    if brief is not None:
+                        d += ' - {}'.format(brief)
             d += '\n'
         
         else:
@@ -94,7 +119,7 @@ class FourBot(commands.Bot):
                     cmd = cmd.all_commands[i]
                     cmd_name += cmd.name + ' '
                 else:
-                    d += 'Command not found.'
+                    d += "I don't have a command like that."
                     break
             else:
                 d = get_help(ctx, cmd, name=cmd_name)

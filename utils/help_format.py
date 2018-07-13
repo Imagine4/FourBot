@@ -4,14 +4,17 @@ from discord.ext import commands
 def format_args(cmd):
     """Returns the argument list with optional/mandatory brackets"""
     params = list(cmd.clean_params.items())
+    if len(params) == 0:
+        return ""
     p_str = ''
+
     for p in params:
         if p[1].default == p[1].empty: 
             p_str += f' <{p[0]}>'
         else: 
             p_str += f' [{p[0]}]'
 
-    return p_str.strip()
+    return "`" + p_str.strip() + "`"
 
 
 def format_commands(prefix, cmd, name=None):
@@ -20,7 +23,7 @@ def format_commands(prefix, cmd, name=None):
     if not name:
         name = cmd.name
     name = name.replace('  ', ' ')
-    d = f'`{prefix}{name} {cmd_args}`\n'
+    d = f'{prefix}{name} {cmd_args}\n'
     d = d.replace('  ', ' ')
 
     if type(cmd) == commands.core.Group:
@@ -33,11 +36,10 @@ def format_commands(prefix, cmd, name=None):
 
 def get_help(ctx, cmd, name=None):
     """Get help for a command"""
-    d = f'Help for command `{cmd.name}`:\n'
-    d += '\n**Usage:**\n'
+    d = f'Commands in {cmd.name.capitalize()}:\n\n'
     d += format_commands(ctx.prefix, cmd, name=name)
-    d += '\n**Description:**\n'
-    d += '{}\n'.format('None' if cmd.help is None else cmd.help.strip())
+    d += '\n'
+    d += '*{}*\n'.format('' if cmd.help is None else cmd.help.strip())
 
     if cmd.aliases:
         d += '\n**Aliases:**'
