@@ -1,1 +1,4 @@
-auth.json
+token.txt
+games.txt
+__pycache__/
+secret.py
