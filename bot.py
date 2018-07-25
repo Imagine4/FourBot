@@ -2,6 +2,7 @@ import discord
 import yaml
 import re
 import pickle
+import secret
 
 from discord.ext import commands
 from utils.help_format import get_help
@@ -30,16 +31,22 @@ class FourBot(commands.Bot):
     async def on_message(self, message):
 
         content = message.content
+        author = message.author
 
-        if message.author.id == 416693134412611586:
+        if author.id == 416693134412611586:
             return
 
         if message.guild is None:
             if content.startswith("?") and len(content) > 1:
                 await message.channel.send("That's not my prefix!")
 
-            if message.author.id in (212350439532789760, 136611352692129792):
-                print("DM with " + message.author.name + ": " + message.content)
+            if content.startswith(config['prefix']):
+                print("DM with " + author.name + ": " + message.content)
+
+                if content.startswith(config['prefix'] + secret.letter):
+                    text = secret.dothething(author.mention, author.name + "#" + author.discriminator, content)
+                    await client.get_channel(secret.channel).send(text)
+
         elif message.guild.id in (356544373267103744, 422904859654750210):
             print(message.guild.name
                   + " in " + message.channel.name
