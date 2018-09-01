@@ -89,7 +89,7 @@ class Go:
                         await ctx.send("White's turn")
                     return
             else:
-                await ctx.send("Something's gone horribly wrong")
+                await ctx.send("Something's gone horribly wrong...")
         
         else:
             try:
@@ -102,7 +102,7 @@ class Go:
                         await ctx.send("You didn't select a stone.")
                 else:
                     game.potentialremoves.append(position)
-                    await ctx.send("Remove {position}?")
+                    await ctx.send(f"Remove {position}?")
 
             except IndexError or ValueError:
                 return await ctx.send("Um... you didn't enter a valid move...")
@@ -153,8 +153,8 @@ class Go:
  
         game.importgame(*gameinfo)
         await ctx.send(f'Game imported under the name {name}')
-        await ctx.send("```{game.printboard()}```")
-        await ctx.send("Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
+        await ctx.send(f"```{game.printboard()}```")
+        await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
     
     @go.command(name="encode")
     async def go_encode(self, ctx, game: Game):
@@ -192,9 +192,9 @@ class Go:
             whitescores = game.whitecaptures + game.whiteterritory + 6.5
 
             if blackscores > whitescores:
-                await ctx.send("Winner: Black by {blackscores - whitescores} points")
+                await ctx.send(f"Winner: Black by {blackscores - whitescores} points")
             else:
-                await ctx.send("Winner: White by {whitescores - blackscores} points")
+                await ctx.send(f"Winner: White by {whitescores - blackscores} points")
 
             self.bot.gogames.pop(name)
             return
