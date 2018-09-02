@@ -70,7 +70,7 @@ class Go:
             if not game.gamenotfinished:
                 await ctx.send(
                     "You can remove dead stones if both players move on the same location of the stone. \n"
-                    f"If you don't know what that is, or you're done, say `4.go end {name}`."
+                    f"If you don't know what that is, or you're done, both players say `4.go {name} end`."
                 )
 
             if valility == "ko":
@@ -157,7 +157,7 @@ class Go:
     
     @go.command(name="import")
     async def go_import(self, ctx, player2: discord.Member, string, name=None):
-        """Allows you to import a game in a variety of ways."""
+        """Allows you to import a game."""
         p1 = ctx.author
         p2 = player2
         if not name: name = ctx.author.name.split(" ")[0]
@@ -234,6 +234,7 @@ class Go:
     @go_delete.after_invoke
     @go_import.after_invoke
     async def save(self, ctx):
+        print("<<saved games>>")
         ctx.bot.save_games()
 
 
