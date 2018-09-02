@@ -56,10 +56,9 @@ class Go:
         Use the go command by itself to make a move! For the position, letter goes first, then number."""
         name, game = game
         if ctx.author.id not in (game.p1, game.p2):
-            return await ctx.send("You're not in a game!")
+            return await ctx.send("You're not in that game!")
             
         if game.gamenotfinished:
-
             if not ((game.p1 == ctx.author.id and game.turn == go.black) or
                     (game.p2 == ctx.author.id and game.turn == go.white)):
                 return await ctx.send("It's not your turn!")    
@@ -81,7 +80,7 @@ class Go:
             elif valility == "occupied":
                 await ctx.send("That spot is occupied, try again.")
             elif valility == "ok":
-                await ctx.send(f"```{game.printboard()}```")
+                await ctx.send(file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
                 if game.gamenotfinished:
                     if game.turn == go.black:
                         await ctx.send("Black's turn")
@@ -92,17 +91,43 @@ class Go:
                 await ctx.send("Something's gone horribly wrong...")
         
         else:
+            print(game.potentialremoves)
             try:
-                if position in game.potentialremoves:
+                if (game.p1 if (ctx.author.id != game.p1) else game.p2) == game.potentialremoves[position]:
+                    if position != "end":
+                        game.remstones(position)
+                        await ctx.send(content=f"Removed {position}",
+                                       file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
+                    else:
+                        game.calculateterritory()
+                        await ctx.send(
+                            f"Black's captures: {game.blackcaptures}\n"
+                            f"Black's territory: {game.blackterritory}\n"
+                            f"White's captures: {game.whitecaptures}\n"
+                            f"White's territory: {game.whiteterritory}"
+                        )
+
+                        blackscores = game.blackcaptures + game.blackterritory
+                        whitescores = game.whitecaptures + game.whiteterritory + 6.5
+
+                        if blackscores > whitescores:
+                            await ctx.send(f"Winner: Black by {blackscores - whitescores} points")
+                        else:
+                            await ctx.send(f"Winner: White by {whitescores - blackscores} points")
+
+                        self.bot.gogames.pop(name)
+                        return
+
+            except KeyError:
+                if position != "end":
                     move = game.processcoords(position)
-                    if game.getcolor(move, game.board) is not go.blank:
-                        game.remstones(move)
-                        await ctx.send(f"```{game.printboard()}``` \n Removed {position}")
+                    if game.getcolor(position, game.board) is not go.blank:
+                        game.remstones[position] = ctx.author.id
                     else:
                         await ctx.send("You didn't select a stone.")
                 else:
-                    game.potentialremoves.append(position)
-                    await ctx.send(f"Remove {position}?")
+                    game.potentialremoves[position] = ctx.author.id
+                await ctx.send(f"Remove {position}?")
 
             except IndexError or ValueError:
                 return await ctx.send("Um... you didn't enter a valid move...")
@@ -112,7 +137,7 @@ class Go:
         """Creates a new game of Go."""
         p2 = player2
         p1 = ctx.author
-        if size > 26: return await ctx.channel.send("No")
+        if size >= 26: return await ctx.channel.send("No")
         if not name:
             name = ctx.author.name.split(" ")[0]
 
@@ -122,12 +147,12 @@ class Go:
         if name in ctx.command.parent.all_commands:
             return await ctx.send("That name is reserved for commands.")
 
-        if not ctx.message.mentions: await ctx.send("You may want to ping player 2.")
+        if not ctx.message.mentions: await ctx.send("Player 2 needs to be pinged.")
 
         self.bot.gogames[name] = go.GoGame(size, p1.id, p2.id)
 
         await ctx.send(f"Game created under the name {name}")
-        await ctx.send(f"```{self.bot.gogames[name].printboard()}```")
+        await ctx.send(file=discord.File(self.bot.gogames[name].printboard(), filename=self.bot.gogames[name].encodeboard() + ".png"))
         await ctx.send(f"{p1.mention} is black. {p2.mention} is white.\nBlack's turn")
     
     @go.command(name="import")
@@ -142,18 +167,18 @@ class Go:
         if name in ctx.command.parent.all_commands:
             return await ctx.send("That name is reserved for commands.")
 
-        if not ctx.message.mentions: await ctx.send("You may want to ping player 2.")
+        if not ctx.message.mentions: await ctx.send("Player 2 needs to be pinged.")
         ctx.bot.gogames[name] = game = go.GoGame(19, p1.id, p2.id)
         try:
             gameinfo = conversions.decodeboard(string)
         except IndexError:
-            return await ctx.send("You need to specify an encoded board.")
+            return await ctx.send("You need enter an encoded board.")
         except Exception:
-            return await ctx.send(f"Invalid board. Please encode your board with `{ctx.prefix}.go encode`.")
+            return await ctx.send(f"Invalid board. You can use `{ctx.prefix}.go encode` or a board's filename.")
  
         game.importgame(*gameinfo)
         await ctx.send(f'Game imported under the name {name}')
-        await ctx.send(f"```{game.printboard()}```")
+        await ctx.send(file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
         await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
     
     @go.command(name="encode")
@@ -161,7 +186,13 @@ class Go:
 
         # TODO: Implement this
         game = game[1]
-        await ctx.send("This hasn't been implemented yet")
+        try:
+            encoding = game.encodeboard()
+            await ctx.send(encoding)
+        except IndexError:
+            await ctx.send("You didn't specify a game.")
+        except KeyError:
+            await ctx.send("That game doesn't exist.")
 
     @go.command(name="delete")
     async def go_delete(self, ctx, name: Game): 
@@ -173,40 +204,15 @@ class Go:
         else:
             await ctx.send("Hey, that's not your game!")
 
-    @go.command(name="end")
-    async def go_end(self, ctx, game: Game):
-        """Ends a game, use after both players have skipped their turn."""
-        name, game = game
-        if game.gamenotfinished:
-            return await ctx.send("You game isn't done!")
-        else:
-            game.calculateterritory()
-            await ctx.send(
-                f"Black's captures: {game.blackcaptures}\n"
-                f"Black's territory: {game.whiteterritory}\n"
-                f"White's captures: {game.whitecaptures}\n"
-                f"White's territory: {game.whiteterritory}"
-            )
-
-            blackscores = game.blackcaptures + game.blackterritory
-            whitescores = game.whitecaptures + game.whiteterritory + 6.5
-
-            if blackscores > whitescores:
-                await ctx.send(f"Winner: Black by {blackscores - whitescores} points")
-            else:
-                await ctx.send(f"Winner: White by {whitescores - blackscores} points")
-
-            self.bot.gogames.pop(name)
-            return
-
     @go.command(name="board")
     async def go_board(self, ctx, game: Game):
         """Prints the board, captures, and turn from the given game."""
+        name = game[0]
         game = game[1]
-        await ctx.send(f"```{game.printboard()}```")
+        await ctx.send(file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
 
         if game.gamenotfinished:
-            return await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} ")
+            return await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
 
     @go.command()
     @commands.check(isowner)
@@ -224,8 +230,9 @@ class Go:
         await ctx.send(message)
 
     @go.after_invoke
-    @go_end.after_invoke
     @go_create.after_invoke
+    @go_delete.after_invoke
+    @go_import.after_invoke
     async def save(self, ctx):
         ctx.bot.save_games()
 

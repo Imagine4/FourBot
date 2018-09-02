@@ -1,3 +1,7 @@
+from PIL import Image
+import io
+from utils import conversions
+
 blank = "·"
 black = "○"
 white = "●"
@@ -9,7 +13,7 @@ letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
 class GoGame:
 
     def __init__(self, size, p1, p2):
-        self.boardsize = size
+        self.size = size
         self.board = [""] * size
         self.clump = set()
         self.previousmove = ""
@@ -24,7 +28,7 @@ class GoGame:
         self.p1 = p1
         self.p2 = p2
         self.movehistory = []
-        self.potentialremoves = []
+        self.potentialremoves = {}
         self.gamenotfinished = True
 
         for i in range(size):
@@ -46,40 +50,40 @@ class GoGame:
         self.blackcaptures = blackcapts
         self.whitecaptures = whitecapts
         self.turn = turn
-        self.boardsize = len(board)
+        self.size = len(board)
         self.board = board
 
+    def encodeboard(self):
+        return conversions.encodeboard(self.board, self.turn, self.blackcaptures, self.whitecaptures)
+
     def printboard(self):
-        inputboard = self.board
-        starpoints = []
-        boardcopy = [i[:] for i in inputboard]
 
-        if self.boardsize == 19:
-            starpoints = [(3, 3), (3, 9), (3, 15),
-                          (9, 3), (9, 9), (9, 15),
-                          (15, 3), (15, 9), (15, 15)]
-        elif self.boardsize == 13:
-            starpoints = [(3, 3), (3, 9),
-                          (6, 6),
-                          (9, 3), (9, 9)]
-        elif self.boardsize == 9:
-            starpoints = [(2, 2), (2, 6),
-                          (4, 4),
-                          (6, 2), (6, 6)]
+        board = self.board
+        size = self.size
+        margin = 10
+        gdim = (size - 1) * 6 + 1
+        idim = gdim + 2 * margin
 
-        for point in starpoints:
-            placedownobject = self.placedown(boardcopy, point, "+")
-            boardcopy = placedownobject[0]
+        boardimg = Image.open(f"utils/sprites/boards/board{self.size}.png")
+        empty = Image.new("RGBA", (idim, idim))
+        bstone = Image.open("utils/sprites/blackstone.png")
+        wstone = Image.open("utils/sprites/whitestone.png")
 
-        boardtoprint = "   " + " ".join(letterorder[:self.boardsize])
-        counter = self.boardsize
+        for i, row in enumerate(board):
+            for j, point in enumerate(row):
+                if point == white:
+                    box = (j * 6 + (margin - 2), i * 6 + (margin - 2))
+                    empty.alpha_composite(wstone, box)
+                if point == black:
+                    box = (j * 6 + (margin - 2), i * 6 + (margin - 2))
+                    empty.alpha_composite(bstone, box)
 
-        for row in boardcopy:
-            boardtoprint += ("\n" + (" " * (2 - len(str(counter))))
-                             + str(counter) + " " + " ".join(row))
-            counter -= 1
+        boardimg.alpha_composite(empty.resize((idim * 8, idim * 8), Image.NEAREST))
 
-        return boardtoprint
+        file = io.BytesIO()
+        boardimg.save(file, format="PNG")
+        file.seek(0)
+        return file
 
     def opposite(self):
         if self.turn == black:
@@ -91,7 +95,7 @@ class GoGame:
 
     def processcoords(self, rawcoords):
         if type(rawcoords) == str:
-            return letterorder.index(rawcoords[0].upper()), self.boardsize - int(rawcoords[1:])
+            return letterorder.index(rawcoords[0].upper()), self.size - int(rawcoords[1:])
         else:
             return rawcoords
 
@@ -100,7 +104,7 @@ class GoGame:
         Edge case handling. Counts edges as whatever outofrange is.
         Useful for handling captures.
         """
-        if 0 <= coords[0] < self.boardsize and 0 <= coords[1] < self.boardsize:
+        if 0 <= coords[0] < self.size and 0 <= coords[1] < self.size:
             return board[coords[1]][coords[0]]
         else:
             return outofrange

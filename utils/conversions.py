@@ -61,13 +61,17 @@ def decodeboard(state):
 
     tritsboard = tritsnew[:size**2]
     tritsturn = tritsnew[size**2]
-    tritswhite = tritsnew[size**2 + 1:size**2 + 9]
-    tritsblack = tritsnew[size**2 + 9:]
+    tritsblack = tritsnew[size**2 + 1:size**2 + 9]
+    tritswhite = tritsnew[size**2 + 9:]
 
-    board = [[None] * size] * size
+    board = [None] * size
+    for i in range(size):
+        board[i] = [None] * size
 
-    for i, start in enumerate(range(0, size ** 2, size)):
-        for j, spot in enumerate(tritsboard[start:(start + size)]):
+    tritslist = [tritsboard[n:n+size] for n in range(0, size**2, size)]
+
+    for i, row in enumerate(tritslist):
+        for j, spot in enumerate(row):
             board[i][j] = symbols.get(spot)
 
     turn = '●'
