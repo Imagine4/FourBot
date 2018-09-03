@@ -5,7 +5,7 @@ import pickle
 import secret
 
 from discord.ext import commands
-from utils.help_format import get_help
+from utils.help_format import get_help, format_args
 
 
 with open('config.yml', 'r') as config_file:
@@ -81,25 +81,41 @@ class FourBot(commands.Bot):
                     pass
 
             elif isinstance(original, discord.HTTPException) and original.status == 400:
-                try: await ctx.send(phrase + "The output can't be sent on Discord (probably too long).")
+                try: await ctx.send("The output can't be sent on Discord (probably too long).")
                 except discord.Forbidden: pass
             else: raise exception
 
         elif isinstance(exception, commands.CheckFailure): pass
         elif isinstance(exception, commands.CommandNotFound): pass
+        elif isinstance(exception, commands.MissingRequiredArgument):
+            cmd = client
+            for i in ctx.message.content[2:].split():
+                if cmd == ctx.bot and i in cmd.all_commands:
+                    cmd = cmd.all_commands[i]
+                elif type(cmd) == commands.Group and i in cmd.all_commands:
+                    cmd = cmd.all_commands[i]
+                else:
+                    break
+
+            prefix = config["prefix"]
+            await ctx.channel.send("There's not enough arguments here.\n"
+                                   f"Syntax: `{prefix}{cmd.signature}`")
         elif isinstance(exception, commands.UserInputError):
             error = ' '.join(exception.args)
             error_data = re.findall('Converting to \"(.*)\" failed for parameter \"(.*)\"\.', error)
-            if not error_data: await ctx.send(phrase + 'Error: {}'.format(' '.join(exception.args)))
+            if not error_data: await ctx.send(phrase + error)
             else:
-                await ctx.send(phrase + '`{1}` needs to be a `{0}`.'.format(*error_data[0]))
+                if ctx.message.id % 50 == 0 and error_data[0] == "game":
+                    await ctx.send(file=discord.File("game.png"))
+                else:
+                    await ctx.send('`{1}` needs to be a(n) `{0}`.'.format(*error_data[0]))
         else: raise exception
     
     @commands.command()
     async def help(self, ctx, *args):
         """Shows the help message."""
         if len(args) == 0:
-            d = f"*Use {config['prefix']}help <command> for more info. Works for subcommands, too!*\n"
+            d = f"Use {config['prefix']}help <command> for more info. Works for subcommands, too!"
             cmds = client.commands
             for cmd in sorted(list(cmds), key=lambda x: x.name):
                 if cmd.hidden is not True:

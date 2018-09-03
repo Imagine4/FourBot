@@ -53,7 +53,8 @@ class Go:
     @commands.group(invoke_without_command=True)
     async def go(self, ctx, game: Game, position): 
         """Go, the board game!
-        Use the go command by itself to make a move! For the position, letter goes first, then number."""
+        To make a move, use 4.go <game> <position>. When typing the position, letter goes first, then number.
+        Go rules: <https://en.wikipedia.org/wiki/Go_(game)#Rules>"""
         name, game = game
         if ctx.author.id not in (game.p1, game.p2):
             return await ctx.send("You're not in that game!")
@@ -93,12 +94,14 @@ class Go:
         else:
             print(game.potentialremoves)
             try:
-                if (game.p1 if (ctx.author.id != game.p1) else game.p2) == game.potentialremoves[position]:
+                try:
                     if position != "end":
-                        game.remstones(position)
-                        await ctx.send(content=f"Removed {position}",
-                                       file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
-                    else:
+                        move = game.processcoords(position)
+                except IndexError or ValueError:
+                    return await ctx.send("You didn't enter a valid move...")
+
+                if (game.p1 if (ctx.author.id != game.p1) else game.p2) == game.potentialremoves[position]:
+                    if position == "end":
                         game.calculateterritory()
                         await ctx.send(
                             f"Black's captures: {game.blackcaptures}\n"
@@ -118,26 +121,30 @@ class Go:
                         self.bot.gogames.pop(name)
                         return
 
-            except KeyError:
-                if position != "end":
-                    move = game.processcoords(position)
-                    if game.getcolor(position, game.board) is not go.blank:
-                        game.remstones[position] = ctx.author.id
                     else:
-                        await ctx.send("You didn't select a stone.")
-                else:
-                    game.potentialremoves[position] = ctx.author.id
-                await ctx.send(f"Remove {position}?")
+                        game.remstones(move)
+                        await ctx.send(content=f"Removed {position}",
+                                       file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
 
-            except IndexError or ValueError:
-                return await ctx.send("Um... you didn't enter a valid move...")
+            except KeyError:
+                if position == "end":
+                    await ctx.send("End game?")
+                else:
+                    move = game.processcoords(position)
+                    if game.getcolor(move, game.board) is not go.blank:
+                        await ctx.send(f"Remove {position}?")
+                    else:
+                        return await ctx.send("You didn't select a stone.")
+
+                game.potentialremoves[position] = ctx.author.id
+
                 
     @go.command(name="create")
     async def go_create(self, ctx, player2: discord.Member, size: int=19, name=None):
         """Creates a new game of Go."""
         p2 = player2
         p1 = ctx.author
-        if size >= 26: return await ctx.channel.send("No")
+        if size >= 26: return await ctx.channel.send("Why would you ever use a board that big?")
         if not name:
             name = ctx.author.name.split(" ")[0]
 
@@ -184,7 +191,6 @@ class Go:
     @go.command(name="encode")
     async def go_encode(self, ctx, game: Game):
 
-        # TODO: Implement this
         game = game[1]
         try:
             encoding = game.encodeboard()
@@ -195,9 +201,9 @@ class Go:
             await ctx.send("That game doesn't exist.")
 
     @go.command(name="delete")
-    async def go_delete(self, ctx, name: Game): 
+    async def go_delete(self, ctx, game: Game):
         """Deletes a Go game you're in."""
-        name, game = name
+        name, game = game
         if ctx.author.id in (game.p1, game.p2):
             self.bot.gogames.pop(name)
             await ctx.send(f"The game {name} no longer exists :thumbsup:")
@@ -207,12 +213,13 @@ class Go:
     @go.command(name="board")
     async def go_board(self, ctx, game: Game):
         """Prints the board, captures, and turn from the given game."""
-        name = game[0]
         game = game[1]
         await ctx.send(file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
 
         if game.gamenotfinished:
             return await ctx.send(f"Turn: {game.turn}, Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
+        else:
+            return await ctx.send(f"Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
 
     @go.command()
     @commands.check(isowner)

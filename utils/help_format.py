@@ -36,10 +36,10 @@ def format_commands(prefix, cmd, name=None):
 
 def get_help(ctx, cmd, name=None):
     """Get help for a command"""
-    d = f'Commands in {cmd.name.capitalize()}:\n\n'
+    d = f'Commands in {cmd.name}:\n\n'
     d += format_commands(ctx.prefix, cmd, name=name)
     d += '\n'
-    d += '*{}*\n'.format('' if cmd.help is None else cmd.help.strip())
+    d += '{}\n'.format('' if cmd.help is None else cmd.help.strip())
 
     if cmd.aliases:
         d += '\n**Aliases:**'
