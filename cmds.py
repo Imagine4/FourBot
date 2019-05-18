@@ -67,7 +67,7 @@ class Commands:
             try:
                 valility = game.nextmove(position)
             except ValueError:
-                return await ctx.send("That's outside the board!")
+                return await ctx.send(f"`{position}` isn't a valid move.'")
 
             if not game.gamenotfinished:
                 await ctx.send(
@@ -108,7 +108,7 @@ class Commands:
                             f"Black's captures: {game.blackcaptures}\n"
                             f"Black's territory: {game.blackterritory}\n"
                             f"White's captures: {game.whitecaptures}\n"
-                            f"White's territory: {game.whiteterritory}"
+                            f"White's territory: {game.whiteterritory}\n"
                             f"Komi: 6.5 for white"
                         )
 
