@@ -119,7 +119,7 @@ class FourBot(commands.Bot):
     async def help(self, ctx, *args):
         """Shows the help message."""
         if len(args) == 0:
-            d = f"Use {config['prefix']}help (command) for more info. Works for subcommands, too!"
+            d = f"Use `{config['prefix']}help <command>` for more info. Works for subcommands, too!"
             cmds = client.commands
             for cmd in sorted(list(cmds), key=lambda x: x.name):
                 if cmd.hidden is not True:
