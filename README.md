@@ -8,6 +8,7 @@ Put the token in `token.txt`
 
 Edit the owners and prefix in `config.yml`
 
-Run the bot with ```
+Run the bot with
+```
 python3 bot.py
 ```
