@@ -67,6 +67,7 @@ class FourBot(commands.Bot):
     async def on_command_error(self, ctx: commands.Context, exception: Exception):
 
         phrase = "Something's gone wrong... \n"
+        prefix = config["prefix"]
 
         if isinstance(exception, commands.CommandInvokeError):
             # all exceptions are wrapped in CommandInvokeError if they are not a subclass of CommandError
@@ -75,13 +76,13 @@ class FourBot(commands.Bot):
             if isinstance(original, discord.Forbidden):
                 # permissions error
                 try:
-                    await ctx.send(phrase + 'Permissions error: `{}`'.format(exception))
+                    await ctx.send(phrase + 'There was a permissions error: `{}`'.format(exception))
                 except discord.Forbidden:
                     # we can't send messages in that channel
                     pass
 
             elif isinstance(original, discord.HTTPException) and original.status == 400:
-                try: await ctx.send("The output can't be sent on Discord (probably too long).")
+                try: await ctx.send(phrase + "The output can't be sent on Discord (probably too long).")
                 except discord.Forbidden: pass
             else: raise exception
 
@@ -89,7 +90,7 @@ class FourBot(commands.Bot):
         elif isinstance(exception, commands.CommandNotFound): pass
         elif isinstance(exception, commands.MissingRequiredArgument):
             cmd = client
-            for i in ctx.message.content[2:].split():
+            for i in ctx.message.content[len(prefix):].split():
                 if cmd == ctx.bot and i in cmd.all_commands:
                     cmd = cmd.all_commands[i]
                 elif type(cmd) == commands.Group and i in cmd.all_commands:
@@ -97,9 +98,12 @@ class FourBot(commands.Bot):
                 else:
                     break
 
-            prefix = config["prefix"]
-            await ctx.channel.send("There's not enough arguments here.\n"
-                                   f"Syntax: `{prefix}{cmd.signature}`")
+            if cmd.name not in ("go",):
+                await ctx.channel.send("There's not enough arguments here.\n"
+                                       f"Syntax: `{prefix}{cmd.signature}`")
+            elif cmd.name == "go":
+                await ctx.channel.send("Use `4.help go` for information on the command go.")
+
         elif isinstance(exception, commands.UserInputError):
             error = ' '.join(exception.args)
             error_data = re.findall('Converting to \"(.*)\" failed for parameter \"(.*)\"\.', error)
@@ -108,14 +112,14 @@ class FourBot(commands.Bot):
                 if ctx.message.id % 50 == 0 and error_data[0] == "game":
                     await ctx.send(file=discord.File("game.png"))
                 else:
-                    await ctx.send('`{1}` needs to be a(n) `{0}`.'.format(*error_data[0]))
+                    await ctx.send(phrase + '`{1}` needs to be a(n) `{0}`.'.format(*error_data[0]))
         else: raise exception
     
     @commands.command()
     async def help(self, ctx, *args):
         """Shows the help message."""
         if len(args) == 0:
-            d = f"Use {config['prefix']}help <command> for more info. Works for subcommands, too!"
+            d = f"Use {config['prefix']}help (command) for more info. Works for subcommands, too!"
             cmds = client.commands
             for cmd in sorted(list(cmds), key=lambda x: x.name):
                 if cmd.hidden is not True:

@@ -17,7 +17,7 @@ class Game(commands.Converter):
         return arg, ctx.bot.gogames[arg]
 
 
-class Go:
+class Commands:
     def __init__(self, bot):
         # give cog a pointer to bot in case we need it
         self.bot = bot
@@ -53,7 +53,7 @@ class Go:
     @commands.group(invoke_without_command=True)
     async def go(self, ctx, game: Game, position): 
         """Go, the board game!
-        To make a move, use 4.go <game> <position>. When typing the position, letter goes first, then number.
+        To make a move, use `4.go <game> <position>`. When typing the position, letter goes first, then number.
         Go rules: <https://en.wikipedia.org/wiki/Go_(game)#Rules>"""
         name, game = game
         if ctx.author.id not in (game.p1, game.p2):
@@ -66,7 +66,7 @@ class Go:
             try:
                 valility = game.nextmove(position)
             except ValueError:
-                return await ctx.send('That is not a valid move!')
+                return await ctx.send("That's outside the board!")
 
             if not game.gamenotfinished:
                 await ctx.send(
@@ -98,7 +98,7 @@ class Go:
                     if position != "end":
                         move = game.processcoords(position)
                 except IndexError or ValueError:
-                    return await ctx.send("You didn't enter a valid move...")
+                    return await ctx.send("You didn't enter a valid position.")
 
                 if (game.p1 if (ctx.author.id != game.p1) else game.p2) == game.potentialremoves[position]:
                     if position == "end":
@@ -108,6 +108,7 @@ class Go:
                             f"Black's territory: {game.blackterritory}\n"
                             f"White's captures: {game.whitecaptures}\n"
                             f"White's territory: {game.whiteterritory}"
+                            f"Komi: 6.5 for white"
                         )
 
                         blackscores = game.blackcaptures + game.blackterritory
@@ -123,7 +124,7 @@ class Go:
 
                     else:
                         game.remstones(move)
-                        await ctx.send(content=f"Removed {position}",
+                        await ctx.send(content=f"Removed stone at {position}",
                                        file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
 
             except KeyError:
@@ -132,7 +133,7 @@ class Go:
                 else:
                     move = game.processcoords(position)
                     if game.getcolor(move, game.board) is not go.blank:
-                        await ctx.send(f"Remove {position}?")
+                        await ctx.send(f"Remove stone at {position}?")
                     else:
                         return await ctx.send("You didn't select a stone.")
 
@@ -149,7 +150,7 @@ class Go:
             name = ctx.author.name.split(" ")[0]
 
         if name in self.bot.gogames:
-            return await ctx.send(f"A game already exists under `{name}`, pick a new one.")
+            return await ctx.send(f"A game already exists named `{name}`, pick a new name.")
 
         if name in ctx.command.parent.all_commands:
             return await ctx.send("That name is reserved for commands.")
@@ -241,9 +242,9 @@ class Go:
     @go_delete.after_invoke
     @go_import.after_invoke
     async def save(self, ctx):
-        print("<<saved games>>")
+        print("<< saved games >>")
         ctx.bot.save_games()
 
 
 def setup(bot):
-    bot.add_cog(Go(bot))
+    bot.add_cog(Commands(bot))

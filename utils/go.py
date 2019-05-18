@@ -78,7 +78,7 @@ class GoGame:
                     box = (j * 6 + (margin - 2), i * 6 + (margin - 2))
                     empty.alpha_composite(bstone, box)
 
-        boardimg.alpha_composite(empty.resize((idim * 8, idim * 8), Image.NEAREST))
+        boardimg.alpha_composite(empty.resize((idim * 16, idim * 16), Image.NEAREST))
 
         file = io.BytesIO()
         boardimg.save(file, format="PNG")
