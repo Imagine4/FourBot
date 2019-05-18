@@ -3,6 +3,7 @@ from utils import go, conversions
 import yaml
 import secret
 import importlib
+import io
 from discord.ext import commands
 
 
@@ -228,14 +229,17 @@ class Commands:
         """List all games of go. Owner only."""
         message = "Go Games:\n"
         for name, game in self.bot.gogames.items():
-            message += (name + " - " + str(game.p1) + ", " + str(game.p2) + ", " + game.turn + "\n"
-                        + str(game.movehistory) + "\n"
+            message += (name + " - " + str(game.p1) + ", " + str(game.p2) + ", " + game.turn + "\r\n"
+                        + str(game.movehistory) + "\r\n"
                         + conversions.encodeboard(game.board, game.turn, game.blackcaptures,
                                                   game.whitecaptures)
-                        + "\n\n")
+                        + "\r\n\r\n")
         #    message += f"{name} - {game.board}\n"
-
-        await ctx.send(message)
+        if len(message) > 2000:
+            f = io.StringIO(message)
+            await ctx.send(file=discord.File(f, filename="listgames.txt")); f.close()
+        else:
+            await ctx.send(message)
 
     @go.after_invoke
     @go_create.after_invoke
