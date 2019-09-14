@@ -9,6 +9,13 @@ symbols = {
 encode_symbols = {v: k for k, v in symbols.items()}
 
 
+def gettime(messageid):
+    messageid = bin(int(messageid))[2:]
+    binarytime = messageid[-64:-22]
+    thousandthofseconds = int(binarytime, 2) + 1420070400000
+    return thousandthofseconds
+
+
 def tobase(num, base):
     if num == 0: return ""
     return tobase(num // base, base) + alph[num % base]  # Milo gave me this. I don't know how it works.

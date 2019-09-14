@@ -207,6 +207,9 @@ class GoGame:
 
         else:
             move = self.processcoords(moveinput)
+            if move[0] > self.size or 0 > move[0] or move[1] > self.size or 0 > move[1]:
+                return "outofrange"
+
             tempboard = [i[:] for i in self.board]
             tempboard = self.placedown(tempboard, move, player)
 

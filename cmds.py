@@ -1,9 +1,10 @@
 import discord
-from utils import go, conversions
+from utils import go, conversions, quadratic
 import yaml
 import secret
 import importlib
 import io
+from datetime import datetime
 from discord.ext import commands
 
 
@@ -44,6 +45,24 @@ class Commands:
         """Posts my GitHub link."""
         await ctx.send("https://github.com/Imagine4/FourBot/")
 
+    @commands.command(hidden=True)
+    async def playback(self, ctx, start, end):
+        """Plays back chat messages from a starting message ID to an ending message ID."""
+        stime = datetime.utcfromtimestamp(conversions.gettime(start)/1000 - 1)
+        etime = datetime.utcfromtimestamp(conversions.gettime(end)/1000 + 1)
+        msgs = ctx.channel.history(after=stime, before=etime)
+        async for msg in msgs:
+            await ctx.send(msg.content)
+
+    @commands.command(hidden=True)
+    async def solve(self, ctx, a, b, c):
+        try:
+            answer = quadratic.solve(int(a), int(b), int(c))
+        except ValueError:
+            await ctx.send("You didn't provide 3 valid numbers.")
+        output = f'```{answer[0]}```\n```{answer[1]}```'
+        await ctx.send(output)
+
     @commands.command(name=secret.letter, hidden=True)
     async def secret_command(self, ctx, thing=None, stuff=None):
         if ctx.guild is None:
@@ -67,7 +86,7 @@ class Commands:
             try:
                 valility = game.nextmove(position)
             except ValueError:
-                return await ctx.send(f"`{position}` isn't a valid move.'")
+                return await ctx.send(f'"{position}" isn\'t a valid move.')
 
             if not game.gamenotfinished:
                 await ctx.send(
@@ -81,6 +100,8 @@ class Commands:
                 await ctx.send("Sucide rule prevents that, try again.")
             elif valility == "occupied":
                 await ctx.send("That spot is occupied, try again.")
+            elif valility == "outofrange":
+                await ctx.send("That's outside the board!")
             elif valility == "ok":
                 await ctx.send(file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
                 if game.gamenotfinished:
@@ -156,7 +177,7 @@ class Commands:
         if name in ctx.command.parent.all_commands:
             return await ctx.send("That name is reserved for commands.")
 
-        if not ctx.message.mentions: await ctx.send("Player 2 needs to be pinged.")
+        #if not ctx.message.mentions: await ctx.send("Player 2 needs to be pinged.")
 
         self.bot.gogames[name] = go.GoGame(size, p1.id, p2.id)
 
