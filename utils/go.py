@@ -175,8 +175,8 @@ class GoGame:
     def calculateterritory(self):
         checkedblanks = []
 
-        for index0, row in enumerate(self.board):
-            for index1, spot in enumerate(row):
+        for index1, row in enumerate(self.board):
+            for index0, spot in enumerate(row):
                 if spot == blank and (index0, index1) not in checkedblanks:
 
                     if self.checkifsurrounded((index0, index1), black, self.board):
