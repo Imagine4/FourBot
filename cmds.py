@@ -19,7 +19,7 @@ class Game(commands.Converter):
         return arg, ctx.bot.gogames[arg]
 
 
-class Commands:
+class Commands(commands.Cog):
     def __init__(self, bot):
         # give cog a pointer to bot in case we need it
         self.bot = bot

@@ -9,7 +9,7 @@ from utils.help_format import get_help, format_args
 
 
 with open('config.yml', 'r') as config_file:
-    config = yaml.load(config_file)
+    config = yaml.load(config_file, Loader=yaml.FullLoader)
 
 
 class FourBot(commands.Bot):
