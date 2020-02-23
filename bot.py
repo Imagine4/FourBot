@@ -5,12 +5,9 @@ import pickle
 import secret
 
 from discord.ext import commands
-from utils.help_format import get_help, format_args
-
 
 with open('config.yml', 'r') as config_file:
-    config = yaml.load(config_file, Loader=yaml.FullLoader)
-
+    config = yaml.load(config_file, Loader=yaml.BaseLoader)
 
 class FourBot(commands.Bot):
     def __init__(self, cfg):
@@ -19,17 +16,20 @@ class FourBot(commands.Bot):
         # keep a copy of the config for future purposes
         self.config = cfg
         
-        # replace help command with our own
-        self.all_commands['help'] = self.help
+        # replace help command with our own, defined below
+        self.help_command = HelpCommand()
+
         self.gogames = {}
         try:
             with open("games.txt", "rb") as f:
                 self.gogames = pickle.load(f)
-        
         except FileNotFoundError: pass
 
-    async def on_message(self, message):
+    def save_games(self):
+        with open("games.txt", "wb") as f:
+            pickle.dump(self.gogames, f)
 
+    async def on_message(self, message):
         content = message.content
         author = message.author
 
@@ -55,17 +55,12 @@ class FourBot(commands.Bot):
 
         await self.process_commands(message)
 
-    def save_games(self):
-        with open("games.txt", "wb") as f:
-            pickle.dump(self.gogames, f)
-
     async def on_ready(self):
         await self.change_presence(activity=discord.Game(name=f"Type {client.command_prefix}help for help"))
         self.load_extension('cmds')
         print("I'm here!!!")
-    
-    async def on_command_error(self, ctx: commands.Context, exception: Exception):
 
+    async def on_command_error(self, ctx: commands.Context, exception: Exception):
         phrase = "Something's gone wrong... \n"
         prefix = config["prefix"]
 
@@ -100,7 +95,7 @@ class FourBot(commands.Bot):
 
             if cmd.name not in ("go",):
                 await ctx.channel.send("There's not enough arguments here.\n"
-                                       f"Syntax: `{prefix}{cmd.signature}`")
+                                       f"Syntax: `{prefix}{cmd.qualified_name} {format_args(cmd)}`")
             elif cmd.name == "go":
                 await ctx.channel.send("Use `4.help go` for information on the command go.")
 
@@ -114,44 +109,78 @@ class FourBot(commands.Bot):
                 else:
                     await ctx.send(phrase + '`{1}` needs to be a(n) `{0}`.'.format(*error_data[0]))
         else: raise exception
-    
-    @commands.command()
-    async def help(self, ctx, *args):
-        """Shows the help message."""
-        if len(args) == 0:
-            d = f"Use `{config['prefix']}help <command>` for more info. Works for subcommands, too!"
-            cmds = client.commands
-            for cmd in sorted(list(cmds), key=lambda x: x.name):
-                if cmd.hidden is not True:
-                    d += '\n  `{}{}`'.format(ctx.prefix, cmd.name)
 
-                    brief = cmd.brief
-                    if brief is None and cmd.help is not None:
-                        brief = cmd.help.split('\n')[0]
 
-                    if brief is not None:
-                        d += ' - {}'.format(brief)
+class HelpCommand(commands.HelpCommand):
+    def format_commands(self, prefix, cmd, name=None):
+        """Lists command and subcommands with formatted args"""
+        cmd_args = format_args(cmd)
+        if not name:
+            name = cmd.name
+        name = name.replace('  ', ' ')
+        d = f'{prefix}{name} `{cmd_args}`\n' if cmd_args else f'{prefix}{name}\n'
+        d = d.replace('  ', ' ')
+
+        if type(cmd) == commands.core.Group:
+            cmds = sorted(list(cmd.commands), key=lambda x: x.name)
+            for subcmd in cmds:
+                d += self.format_commands(prefix, subcmd, name=f'{name} {subcmd.name}')
+
+        return d
+
+    async def send_bot_help(self, mapping):
+        ctx = self.context
+        prefix = self.clean_prefix
+
+        d = f"Use `{prefix}help <command>` for more info. Works for subcommands, too!"
+        for cmd in sorted(mapping[ctx.bot.cogs["Commands"]], key=lambda x: x.name):
+            if cmd.hidden is not True:
+                d += '\n  `{}{}`'.format(prefix, cmd.name)
+
+                brief = cmd.brief
+                if brief is None and cmd.help is not None:
+                    brief = cmd.help.split('\n')[0]
+
+                if brief is not None:
+                    d += ' - {}'.format(brief)
+        await ctx.send(d)
+
+    async def send_command_help(self, cmd, d=''):
+        ctx = self.context
+        prefix = self.clean_prefix
+
+        d += self.format_commands(ctx.prefix, cmd)
+        d += '\n'
+        d += '{}\n'.format('' if cmd.help is None else cmd.help.strip())
+
+        if cmd.aliases:
+            d += '\n**Aliases:**'
+            for alias in cmd.aliases:
+                d += f'\n`{prefix}{alias}`'
+
             d += '\n'
-        
-        else:
-            d = ''
-            cmd = client
-            cmd_name = ''
-            for i in args:
-                i = i.replace('@', '@\u200b')
-                if cmd == ctx.bot and i in cmd.all_commands:
-                    cmd = cmd.all_commands[i]
-                    cmd_name += cmd.name + ' '
-                elif type(cmd) == commands.Group and i in cmd.all_commands:
-                    cmd = cmd.all_commands[i]
-                    cmd_name += cmd.name + ' '
-                else:
-                    d += "I don't have a command like that."
-                    break
-            else:
-                d = get_help(ctx, cmd, name=cmd_name)
 
-        return await ctx.send(d)
+        await ctx.send(d)
+
+    async def send_group_help(self, group):
+        d = f'Commands in {group.name}:\n\n'
+        await self.send_command_help(group, d)
+
+
+def format_args(cmd):
+    """Returns the argument list with optional/mandatory brackets"""
+    params = list(cmd.clean_params.items())
+    if len(params) == 0:
+        return ""
+    p_str = ''
+
+    for p in params:
+        if p[1].default == p[1].empty:
+            p_str += f' <{p[0]}>'
+        else:
+            p_str += f' [{p[0]}]'
+
+    return p_str.strip()
 
 
 if __name__ == '__main__':
