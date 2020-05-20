@@ -9,14 +9,17 @@ from discord.ext import commands
 
 
 def isowner(ctx):
-    return ctx.author.id in ctx.bot.config['owners']
+    return str(ctx.author.id) in ctx.bot.config['owners']
     # return ctx.author.id in (212350439532789760, 136611352692129792)
 
 
 class Game(commands.Converter):
-    @staticmethod
-    async def convert(ctx, arg):
-        return arg, ctx.bot.gogames[arg]
+    async def convert(self, ctx, arg):
+        games = ctx.bot.gogames
+        for key in games:
+            if arg.lower() == key.lower():
+                arg = key
+        return ctx.bot.gogames[arg]
 
 
 class Commands(commands.Cog):
@@ -75,7 +78,7 @@ class Commands(commands.Cog):
         """Go, the board game!
         To make a move, use `4.go <game> <position>`. When typing the position, letter goes first, then number.
         Go rules: <https://en.wikipedia.org/wiki/Go_(game)#Rules>"""
-        name, game = game
+        name = game.name
         if ctx.author.id not in (game.p1, game.p2):
             return await ctx.send("You're not in that game!")
             
@@ -91,7 +94,7 @@ class Commands(commands.Cog):
             if not game.gamenotfinished:
                 await ctx.send(
                     "You can remove dead stones if both players move on the same location of the stone. \n"
-                    f"If you don't know what that is, or you're done, both players say `4.go {name} end`."
+                    f"If you don't know what that is, or you're done, both players say `{ctx.bot.config['prefix']}go {name} end`."
                 )
 
             if valility == "ko":
@@ -106,9 +109,9 @@ class Commands(commands.Cog):
                 await ctx.send(file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
                 if game.gamenotfinished:
                     if game.turn == go.black:
-                        await ctx.send("Black's turn")
+                        await ctx.send(f"Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}\nBlack's turn")
                     else:
-                        await ctx.send("White's turn")
+                        await ctx.send(f"Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}\nWhite's turn")
                     return
             else:
                 await ctx.send("Something's gone horribly wrong...")
@@ -179,7 +182,7 @@ class Commands(commands.Cog):
 
         #if not ctx.message.mentions: await ctx.send("Player 2 needs to be pinged.")
 
-        self.bot.gogames[name] = go.GoGame(size, p1.id, p2.id)
+        self.bot.gogames[name] = go.GoGame(size, p1.id, p2.id, name)
 
         await ctx.send(f"Game created under the name {name}")
         await ctx.send(file=discord.File(self.bot.gogames[name].printboard(), filename=self.bot.gogames[name].encodeboard() + ".png"))
@@ -198,7 +201,7 @@ class Commands(commands.Cog):
             return await ctx.send("That name is reserved for commands.")
 
         if not ctx.message.mentions: await ctx.send("Player 2 needs to be pinged.")
-        ctx.bot.gogames[name] = game = go.GoGame(19, p1.id, p2.id)
+        ctx.bot.gogames[name] = game = go.GoGame(19, p1.id, p2.id, name)
         try:
             gameinfo = conversions.decodeboard(string)
         except IndexError:
@@ -213,8 +216,6 @@ class Commands(commands.Cog):
     
     @go.command(name="encode")
     async def go_encode(self, ctx, game: Game):
-
-        game = game[1]
         try:
             encoding = game.encodeboard()
             await ctx.send(encoding)
@@ -226,7 +227,9 @@ class Commands(commands.Cog):
     @go.command(name="delete")
     async def go_delete(self, ctx, game: Game):
         """Deletes a Go game you're in."""
-        name, game = game
+        if not game:
+            return
+        name = game.name
         if ctx.author.id in (game.p1, game.p2):
             self.bot.gogames.pop(name)
             await ctx.send(f"The game {name} no longer exists :thumbsup:")
@@ -236,7 +239,6 @@ class Commands(commands.Cog):
     @go.command(name="board")
     async def go_board(self, ctx, game: Game):
         """Prints the board, captures, and turn from the given game."""
-        game = game[1]
         await ctx.send(file=discord.File(game.printboard(), filename=game.encodeboard() + ".png"))
 
         if game.gamenotfinished:
@@ -244,9 +246,9 @@ class Commands(commands.Cog):
         else:
             return await ctx.send(f"Captures: {go.black} {game.whitecaptures} {go.white} {game.blackcaptures}")
 
-    @go.command()
+    @go.command(name="listgames")
     @commands.check(isowner)
-    async def listgames(self, ctx):
+    async def go_listgames(self, ctx):
         """List all games of go. Owner only."""
         message = "Go Games:\n"
         for name, game in self.bot.gogames.items():
@@ -267,7 +269,7 @@ class Commands(commands.Cog):
     @go_delete.after_invoke
     @go_import.after_invoke
     async def save(self, ctx):
-        print("<< saved games >>")
+        print("<< Saved games >>")
         ctx.bot.save_games()
 
 

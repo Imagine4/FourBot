@@ -108,6 +108,15 @@ class FourBot(commands.Bot):
                     await ctx.send(file=discord.File("game.png"))
                 else:
                     await ctx.send(phrase + '`{1}` needs to be a(n) `{0}`.'.format(*error_data[0]))
+
+        elif isinstance(exception, commands.ConversionError):
+            Game = self.extensions["cmds"].Game
+            print(id(exception.converter))
+            print(id(Game))
+            if exception.converter == Game:
+                name = str(exception.args[1])[1:-1]
+                await ctx.send(phrase + f"There isn't a game called {name}.")
+
         else: raise exception
 
 
@@ -165,6 +174,12 @@ class HelpCommand(commands.HelpCommand):
     async def send_group_help(self, group):
         d = f'Commands in {group.name}:\n\n'
         await self.send_command_help(group, d)
+
+    def command_not_found(self, string):
+        return f"I don't have a command called {string}."
+
+    def subcommand_not_found(self, command, string):
+        return f"I don't have a command called {string} in {command.name}."
 
 
 def format_args(cmd):

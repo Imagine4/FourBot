@@ -11,8 +11,7 @@ letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
 
 
 class GoGame:
-
-    def __init__(self, size, p1, p2):
+    def __init__(self, size, p1, p2, name):
         self.size = size
         self.board = [""] * size
         self.clump = set()
@@ -27,6 +26,7 @@ class GoGame:
         self.whiteterritory = 0
         self.p1 = p1
         self.p2 = p2
+        self.name = name
         self.movehistory = []
         self.potentialremoves = {}
         self.gamenotfinished = True
@@ -57,28 +57,27 @@ class GoGame:
         return conversions.encodeboard(self.board, self.turn, self.blackcaptures, self.whitecaptures)
 
     def printboard(self):
-
         board = self.board
         size = self.size
-        margin = 10
+        margin = 20
         gdim = (size - 1) * 6 + 1
         idim = gdim + 2 * margin
 
         boardimg = Image.open(f"utils/sprites/boards/board{self.size}.png")
-        empty = Image.new("RGBA", (idim, idim))
+        stones = Image.new("RGBA", (idim, idim))
         bstone = Image.open("utils/sprites/blackstone.png")
         wstone = Image.open("utils/sprites/whitestone.png")
 
         for i, row in enumerate(board):
             for j, point in enumerate(row):
                 if point == white:
-                    box = (j * 6 + (margin - 2), i * 6 + (margin - 2))
-                    empty.alpha_composite(wstone, box)
+                    box = (j * 10 + (margin - 4), i * 10 + (margin - 4))
+                    stones.alpha_composite(wstone, box)
                 if point == black:
-                    box = (j * 6 + (margin - 2), i * 6 + (margin - 2))
-                    empty.alpha_composite(bstone, box)
+                    box = (j * 10 + (margin - 4), i * 10 + (margin - 4))
+                    stones.alpha_composite(bstone, box)
 
-        boardimg.alpha_composite(empty.resize((idim * 8, idim * 8), Image.NEAREST))
+        boardimg.alpha_composite(stones.resize((idim * 4, idim * 4), Image.NEAREST))
 
         file = io.BytesIO()
         boardimg.save(file, format="PNG")
@@ -149,14 +148,13 @@ class GoGame:
         else:
             return True
 
-    def remstones(self, coords):
-
+    def remstones(self, coords, capture=True):
         self.clump.clear()
         self.clump.add(coords)
         placestocheck = [coords]
+        capcolor = self.getcolor(coords, self.board)
 
         while len(placestocheck) > 0:
-
             currentplace = placestocheck[0]
             placestocheck.remove(currentplace)
             adjacents = self.findadjacent(currentplace)
@@ -170,6 +168,11 @@ class GoGame:
                         placestocheck.append(adjplace)
 
         for place in self.clump:
+            if capture:
+                if capcolor == black:
+                    self.whitecaptures += 1
+                if capcolor == white:
+                    self.blackcaptures += 1
             self.placedown(self.board, place, blank)
 
     def calculateterritory(self):
@@ -194,10 +197,10 @@ class GoGame:
         oppplayer = self.opposite()
         self.previousturn = self.turn
 
-        if moveinput == "skip":
+        if moveinput in ["skip", "pass"]:
             self.turn = oppplayer
 
-            if self.previousmove == "skip":
+            if self.previousmove in ["skip", "pass"]:
                 self.gamenotfinished = False
 
             self.previousmove = moveinput
@@ -250,7 +253,7 @@ class GoGame:
                 self.previousmove = moveinput
                 self.turn = self.opposite()
 
-                if self.previousmove is not "skip":
+                if self.previousmove not in ["skip", "pass"]:
                     self.boardbeforelast = [i[:] for i in self.previousboard]
                     self.previousboard = [i[:] for i in self.board]
 
