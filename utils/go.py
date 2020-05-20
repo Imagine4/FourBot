@@ -60,7 +60,7 @@ class GoGame:
         board = self.board
         size = self.size
         margin = 20
-        gdim = (size - 1) * 6 + 1
+        gdim = (size - 1) * 12 + 1
         idim = gdim + 2 * margin
 
         boardimg = Image.open(f"utils/sprites/boards/board{self.size}.png")
