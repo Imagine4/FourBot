@@ -80,12 +80,26 @@ class Commands(commands.Cog):
         Go rules: <https://en.wikipedia.org/wiki/Go_(game)#Rules>"""
         name = game.name
         if ctx.author.id not in (game.p1, game.p2):
-            return await ctx.send("You're not in that game!")
-            
+            return await ctx.send("Hey, that's not your game!")
+        if not ((game.p1 == ctx.author.id and game.turn == go.black) or
+                (game.p2 == ctx.author.id and game.turn == go.white)):
+            return await ctx.send("It's not your turn!")
+
+        results = (f"Black's captures: {game.blackcaptures}\n"
+                   f"Black's territory: {game.blackterritory}\n"
+                   f"White's captures: {game.whitecaptures}\n"
+                   f"White's territory: {game.whiteterritory}\n"
+                   f"Komi: 6.5 for white")
+
         if game.gamenotfinished:
-            if not ((game.p1 == ctx.author.id and game.turn == go.black) or
-                    (game.p2 == ctx.author.id and game.turn == go.white)):
-                return await ctx.send("It's not your turn!")    
+            if position == "resign":
+                if game.turn == go.black:
+                    await ctx.send("White wins by resignation")
+                elif game.turn == go.white:
+                    await ctx.send("Black wins by resignation")
+                self.bot.gogames.pop(name)
+                return
+
             try:
                 valility = game.nextmove(position)
             except ValueError:
@@ -120,7 +134,7 @@ class Commands(commands.Cog):
             print(game.potentialremoves)
             try:
                 try:
-                    if position != "end":
+                    if position not in ["end", "resign"]:
                         move = game.processcoords(position)
                 except IndexError or ValueError:
                     return await ctx.send("You didn't enter a valid position.")
@@ -128,13 +142,7 @@ class Commands(commands.Cog):
                 if (game.p1 if (ctx.author.id != game.p1) else game.p2) == game.potentialremoves[position]:
                     if position == "end":
                         game.calculateterritory()
-                        await ctx.send(
-                            f"Black's captures: {game.blackcaptures}\n"
-                            f"Black's territory: {game.blackterritory}\n"
-                            f"White's captures: {game.whitecaptures}\n"
-                            f"White's territory: {game.whiteterritory}\n"
-                            f"Komi: 6.5 for white"
-                        )
+                        await ctx.send(results)
 
                         blackscores = game.blackcaptures + game.blackterritory
                         whitescores = game.whitecaptures + game.whiteterritory + 6.5
@@ -143,7 +151,6 @@ class Commands(commands.Cog):
                             await ctx.send(f"Winner: Black by {blackscores - whitescores} points")
                         else:
                             await ctx.send(f"Winner: White by {whitescores - blackscores} points")
-
                         self.bot.gogames.pop(name)
                         return
 

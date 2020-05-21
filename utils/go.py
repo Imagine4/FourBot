@@ -3,8 +3,8 @@ import io
 from utils import conversions
 
 blank = "·"
-black = "○"
-white = "●"
+black = ":black_circle:"
+white = ":white_circle:"
 
 letterorder = ("A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N",
                "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA")
